@@ -106,13 +106,16 @@ int main() {
 
     auto q = parse_partitions(mypart.c_str());
     auto al = parse_alignment_file(MYFILE);
-    //q = parse_partitions(join(partitions).c_str());
-    q = parse_partitions(partitions[0].c_str());
+    q = parse_partitions(join(partitions).c_str());
+//    q = parse_partitions(partitions[0].c_str());
     auto pll = make_unique<PLL>(attr, q.get(), al.get());
 
-    pll->optimise(false, false, false, true, 0.0001);
+    pll->optimise(true, true, true, true, 0.0001);
     cout << pll->get_likelihood() << endl;
     cout << pll->get_tree() << endl;
+    for (int i=0; i < pll->get_number_of_partitions(); ++i) {
+        cout << (*pll)[i]->width << endl;
+    }
 
     return 0;
 }

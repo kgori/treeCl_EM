@@ -2,6 +2,7 @@
 // Created by Kevin Gori on 27/05/15.
 //
 
+#include <pll/pll.h>
 #include "PLL.h"
 std::string PLL::get_tree() {
     pllTreeToNewick(tr->tree_string, tr.get(), partitions,
@@ -15,6 +16,10 @@ std::string PLL::get_tree() {
 
 double PLL::get_likelihood() {
     return tr->likelihood;
+}
+
+int PLL::get_number_of_partitions() {
+    return partitions->numberOfPartitions;
 }
 
 void PLL::optimise(bool rates, bool freqs, bool alphas, bool branches, double epsilon) {
@@ -78,4 +83,9 @@ void PLL::optimise(bool rates, bool freqs, bool alphas, bool branches, double ep
             break;
         }
     }
+}
+
+
+const int PLL::get_number_of_partitions() const {
+    return partitions->numberOfPartitions;
 }

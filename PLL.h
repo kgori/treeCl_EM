@@ -6,7 +6,7 @@
 #define TREECL_EM_PLL_H
 
 #include "memory_management.h"
-
+typedef pInfo *pInfoPtr;
 class PLL{
 
 public:
@@ -54,6 +54,16 @@ public:
     void optimise(bool rates, bool freqs, bool alphas, bool branches, double epsilon=0.0001);
     std::string get_tree();
     double get_likelihood();
+    int get_number_of_partitions();
+    const int get_number_of_partitions() const;
+    pInfoPtr& operator[](int i)  {
+        if (i > get_number_of_partitions()) throw std::exception();
+        return partitions->partitionData[i];
+    };
+    const pInfoPtr& operator[](int i) const  {
+        if (i > get_number_of_partitions()) throw std::exception();
+        return partitions->partitionData[i];
+    };
 
 private:
     partitionList* partitions;
