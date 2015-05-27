@@ -22,7 +22,7 @@ int PLL::get_number_of_partitions() {
     return partitions->numberOfPartitions;
 }
 
-void PLL::optimise(bool rates, bool freqs, bool alphas, bool branches, double epsilon) {
+void PLL::optimise(bool rates, bool freqs, bool alphas, bool branches, double epsilon, bool verbose) {
     if (!rates && !freqs && !alphas && !branches) return;
     int i = 0;
     double loop_start_lnl;
@@ -31,42 +31,42 @@ void PLL::optimise(bool rates, bool freqs, bool alphas, bool branches, double ep
     for (;;) {
         i++;
         loop_start_lnl = tr->likelihood;
-        std::cerr << "  iter " << i << " current lnl = " << loop_start_lnl << std::endl;
+        if (verbose) std::cerr << "  iter " << i << " current lnl = " << loop_start_lnl << std::endl;
 
         if (rates) {
             pllOptRatesGeneric(tr.get(), partitions, epsilon, partitions->rateList);
             pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
-            std::cerr << "    rates:  " << tr->likelihood << std::endl;
+            if (verbose) std::cerr << "    rates:  " << tr->likelihood << std::endl;
         }
 
         if (branches) {
             pllOptimizeBranchLengths(tr.get(), partitions, 32);
             pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
-            std::cerr << "    brlen1: " << tr->likelihood << std::endl;
+            if (verbose) std::cerr << "    brlen1: " << tr->likelihood << std::endl;
         }
 
         if (freqs) {
             pllOptBaseFreqs(tr.get(), partitions, epsilon, partitions->freqList);
             pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
-            std::cerr << "    freqs:  " << tr->likelihood << std::endl;
+            if (verbose) std::cerr << "    freqs:  " << tr->likelihood << std::endl;
         }
 
         if (branches) {
             pllOptimizeBranchLengths(tr.get(), partitions, 32);
             pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
-            std::cerr << "    brlen2: " << tr->likelihood << std::endl;
+            if (verbose) std::cerr << "    brlen2: " << tr->likelihood << std::endl;
         }
 
         if (alphas) {
             pllOptAlphasGeneric (tr.get(), partitions, epsilon, partitions->alphaList);
             pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
-            std::cerr << "    alphas: " << tr->likelihood << std::endl;
+            if (verbose) std::cerr << "    alphas: " << tr->likelihood << std::endl;
         }
 
         if (branches) {
             pllOptimizeBranchLengths(tr.get(), partitions, 32);
             pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
-            std::cerr << "    brlen3: " << tr->likelihood << std::endl;
+            if (verbose) std::cerr << "    brlen3: " << tr->likelihood << std::endl;
         }
 
         loop_end_lnl = tr->likelihood;
@@ -77,9 +77,11 @@ void PLL::optimise(bool rates, bool freqs, bool alphas, bool branches, double ep
         }
 
         if (loop_end_lnl - loop_start_lnl <= tr->likelihoodEpsilon) {
-            std::cerr << "loop_start_lnl = " << loop_start_lnl << std::endl
-            << "loop_end_lnl   = " << loop_end_lnl << std::endl
-            << "END" << std::endl;
+            if (verbose) {
+                std::cerr << "loop_start_lnl = " << loop_start_lnl << std::endl
+                          << "loop_end_lnl   = " << loop_end_lnl << std::endl
+                          << "END" << std::endl;
+            }
             break;
         }
     }

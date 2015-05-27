@@ -47,11 +47,11 @@ public:
     ~PLL() {
         if (partitions) {
             pllPartitionsDestroy(tr.get(), &partitions);
-            std::cout << "Destroyed partitions" << std::endl;
+            //std::cout << "Destroyed partitions" << std::endl;
         }
     }
 
-    void optimise(bool rates, bool freqs, bool alphas, bool branches, double epsilon=0.0001);
+    void optimise(bool rates, bool freqs, bool alphas, bool branches, double epsilon=0.0001, bool verbose=false);
     std::string get_tree();
     double get_likelihood();
     int get_number_of_partitions();

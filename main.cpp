@@ -113,7 +113,7 @@ int main() {
         q = parse_partitions(part.c_str());
         auto pll = make_unique<PLL>(attr, q.get(), al.get());
         pll->optimise(true, true, true, true, 0.1);
-        cout << pll->get_likelihood() << endl;
+        cout << pll->get_likelihood() << " " << pll->get_likelihood() / (*pll)[0]->width << endl;
         cout << pll->get_tree() << endl;
         trees.push_back(pll->get_tree());
     }
