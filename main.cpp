@@ -87,11 +87,11 @@ string get_tree(pllInstance* tr, partitionList* partitions) {
 int main() {
     pllInstanceAttr attr;
     attr.rateHetModel = PLL_GAMMA;
-    attr.fastScaling = PLL_TRUE;
-    attr.saveMemory = PLL_TRUE;
+    attr.fastScaling = PLL_FALSE;
+    attr.saveMemory = PLL_FALSE;
     attr.useRecom = PLL_FALSE;
     attr.randomNumberSeed = 12345;
-    attr.numberOfThreads = 8;
+    attr.numberOfThreads = 1;
 
     pllInstance* tr = pllCreateInstance(&attr);
 
@@ -106,12 +106,13 @@ int main() {
 
     auto q = parse_partitions(mypart.c_str());
     auto al = parse_alignment_file(MYFILE);
-    q = parse_partitions(join(partitions).c_str());
-//    q = parse_partitions(partitions[0].c_str());
+    //q = parse_partitions(join(partitions).c_str());
+    q = parse_partitions(partitions[0].c_str());
     auto pll = make_unique<PLL>(attr, q.get(), al.get());
-    pll->optimise(true, true, true, true, 0.0001);
-    cout << pll->tr->likelihood << endl;
-    cout << get_tree(pll->tr.get(), pll->partitions) << endl;
+
+    pll->optimise(false, false, false, true, 0.0001);
+    cout << pll->get_likelihood() << endl;
+    cout << pll->get_tree() << endl;
 
     return 0;
 }

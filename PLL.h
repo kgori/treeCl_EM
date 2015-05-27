@@ -15,7 +15,27 @@ public:
         partitions = pllPartitionsCommit(queue, alignment);
         pllAlignmentRemoveDups(alignment, partitions);
         pllTreeInitTopologyRandom(tr.get(), alignment->sequenceCount, alignment->sequenceLabels);
-        pllLoadAlignment(tr.get(), alignment, partitions);
+        if (!pllLoadAlignment(tr.get(), alignment, partitions)) {
+            std::cout << "Problem" << std::endl;
+        }
+        pllComputeRandomizedStepwiseAdditionParsimonyTree(tr.get(), partitions);
+        pllInitModel(tr.get(), partitions);
+        pllTreeToNewick(tr->tree_string, tr.get(), partitions,
+                        tr->start->back, PLL_TRUE, PLL_TRUE,
+                        PLL_FALSE, PLL_FALSE, PLL_FALSE,
+                        0, PLL_FALSE, PLL_FALSE);
+        newickUPtr newick = newickUPtr(pllNewickParseString(tr->tree_string));
+        pllTreeInitTopologyNewick(tr.get(), newick.get(), PLL_TRUE);
+    }
+
+    PLL(pllInstanceAttr& attr, pllQueue* queue, pllNewickTree* newick, pllAlignmentData* alignment) {
+        tr = instanceUPtr(pllCreateInstance(&attr));
+        partitions = pllPartitionsCommit(queue, alignment);
+        pllAlignmentRemoveDups(alignment, partitions);
+        pllTreeInitTopologyNewick(tr.get(), newick, PLL_FALSE);
+        if (!pllLoadAlignment(tr.get(), alignment, partitions)) {
+            std::cout << "Problem" << std::endl;
+        }
         pllComputeRandomizedStepwiseAdditionParsimonyTree(tr.get(), partitions);
         pllInitModel(tr.get(), partitions);
     }
@@ -32,7 +52,10 @@ public:
     }
 
     void optimise(bool rates, bool freqs, bool alphas, bool branches, double epsilon=0.0001);
+    std::string get_tree();
+    double get_likelihood();
 
+private:
     partitionList* partitions;
     instanceUPtr tr;
 };

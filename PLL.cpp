@@ -3,6 +3,20 @@
 //
 
 #include "PLL.h"
+std::string PLL::get_tree() {
+    pllTreeToNewick(tr->tree_string, tr.get(), partitions,
+    tr->start->back, PLL_TRUE, PLL_TRUE,
+    PLL_FALSE, PLL_FALSE, PLL_FALSE,
+    0, PLL_FALSE, PLL_FALSE);
+    std::string tree(tr->tree_string);
+    tree.erase(std::remove(tree.begin(), tree.end(), '\n'), tree.end());
+    return tree;
+}
+
+double PLL::get_likelihood() {
+    return tr->likelihood;
+}
+
 void PLL::optimise(bool rates, bool freqs, bool alphas, bool branches, double epsilon) {
     if (!rates && !freqs && !alphas && !branches) return;
     int i = 0;
