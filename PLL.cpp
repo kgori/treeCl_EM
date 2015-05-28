@@ -91,3 +91,18 @@ void PLL::optimise(bool rates, bool freqs, bool alphas, bool branches, double ep
 const int PLL::get_number_of_partitions() const {
     return partitions->numberOfPartitions;
 }
+
+void PLL::tree_search(bool optimise_model) {
+    pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
+    int pll_bool = optimise_model ? PLL_TRUE : PLL_FALSE;
+    pllRaxmlSearchAlgorithm(tr.get(), partitions, pll_bool);
+}
+
+void PLL::adjustAlignmentLength(partitionList *partitions, pllAlignmentData *alignment) {
+    // Do the adjustment of alignment length in case partition does not cover all sites
+    int usedAlLength = 0;
+    for (int i = 0; i < partitions->numberOfPartitions; ++i) {
+        usedAlLength += partitions->partitionData[i]->width;
+    }
+    alignment->sequenceLength = usedAlLength;
+}

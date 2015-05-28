@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <pll/pll.h>
 #include "memory_management.h"
 #include "PLL.h"
 
@@ -93,30 +94,27 @@ int main() {
     attr.randomNumberSeed = 12345;
     attr.numberOfThreads = 1;
 
-    pllInstance* tr = pllCreateInstance(&attr);
-
-
     vector<string> partitions = readlines(MYPART);
-    string mypart = join(partitions);
-    cout << mypart << endl;
-    if (mypart.length() == 0) {
-        cerr << "Couldn't read partitions file" << endl;
-        return 1;
-    }
 
-    auto q = parse_partitions(mypart.c_str());
-    auto al = parse_alignment_file(MYFILE);
-    q = parse_partitions(join(partitions).c_str());
+    queueUPtr q;
+
     std::vector<std::string> trees;
+    std::vector<PLLUPtr> insts;
     for (string& part : partitions) {
         auto al = parse_alignment_file(MYFILE);
+//        q = parse_partitions(join(partitions).c_str());
         q = parse_partitions(part.c_str());
         auto pll = make_unique<PLL>(attr, q.get(), al.get());
-        pll->optimise(true, true, true, true, 0.1);
+//        auto pll2 = std::move(pll);
+        insts.push_back(make_unique<PLL>(attr, q.get(), al.get()));
+    }
+
+    for (auto& pll : insts) {
+        pll->optimise(false, false, false, true);
         cout << pll->get_likelihood() << " " << pll->get_likelihood() / (*pll)[0]->width << endl;
-        cout << pll->get_tree() << endl;
         trees.push_back(pll->get_tree());
     }
+
 //    q = parse_partitions(partitions[0].c_str());
 //    auto pll = make_unique<PLL>(attr, q.get(), al.get());
 //

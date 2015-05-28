@@ -5,6 +5,7 @@
 #ifndef TREECL_EM_PLL_H
 #define TREECL_EM_PLL_H
 
+#include <pll/pll.h>
 #include "memory_management.h"
 typedef pInfo *pInfoPtr;
 class PLL{
@@ -14,6 +15,10 @@ public:
         tr = instanceUPtr(pllCreateInstance(&attr));
         partitions = pllPartitionsCommit(queue, alignment);
         pllAlignmentRemoveDups(alignment, partitions);
+
+        // Here do the adjustment of alignment length in case partition does not cover all sites
+        adjustAlignmentLength(partitions, alignment);
+
         pllTreeInitTopologyRandom(tr.get(), alignment->sequenceCount, alignment->sequenceLabels);
         if (!pllLoadAlignment(tr.get(), alignment, partitions)) {
             std::cout << "Problem" << std::endl;
@@ -32,6 +37,10 @@ public:
         tr = instanceUPtr(pllCreateInstance(&attr));
         partitions = pllPartitionsCommit(queue, alignment);
         pllAlignmentRemoveDups(alignment, partitions);
+
+        // Here do the adjustment of alignment length in case partition does not cover all sites
+        adjustAlignmentLength(partitions, alignment);
+
         pllTreeInitTopologyNewick(tr.get(), newick, PLL_FALSE);
         if (!pllLoadAlignment(tr.get(), alignment, partitions)) {
             std::cout << "Problem" << std::endl;
@@ -40,14 +49,31 @@ public:
         pllInitModel(tr.get(), partitions);
     }
 
-    PLL(PLL&& rhs) = delete;
+    // Move constructor
+    PLL (PLL&& other) noexcept : partitions(std::move(other.partitions)), tr(std::move(other.tr)) {
+        std::cout << "Move constructed PLL" << std::endl;
+    }
 
-    PLL& operator=(PLL&& rhs) = delete;
+    /** Move assignment operator */
+    PLL& operator= (PLL&& other) noexcept {
+        // simplified move-constructor that also protects against move-to-self.
+        partitions = std::move(other.partitions);
+        tr = std::move(other.tr);
+        std::cout << "Move assigned PLL" << std::endl;
+        return *this;
+    }
 
-    ~PLL() {
+    // Delete copy assignment
+    PLL& operator=(const PLL& other) = delete;
+
+    // Delete copy constructor
+    PLL(const PLL& other) = delete;
+
+    // Destructor
+    ~PLL() noexcept {
         if (partitions) {
             pllPartitionsDestroy(tr.get(), &partitions);
-            //std::cout << "Destroyed partitions" << std::endl;
+            std::cout << "Destroyed partitions" << std::endl;
         }
     }
 
@@ -65,10 +91,15 @@ public:
         return partitions->partitionData[i];
     };
 
-private:
+    void tree_search(bool optimise_model);
+
+public:
     partitionList* partitions;
     instanceUPtr tr;
+    void adjustAlignmentLength(partitionList* partitions, pllAlignmentData* alignment);
 };
 
+typedef std::unique_ptr<PLL> PLLUPtr;
+typedef PLL *PLLPtr;
 
 #endif //TREECL_EM_PLL_H

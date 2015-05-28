@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 project(treeCl_EM)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
-set(MY_LIB_LINK_LIBRARIES -lpll-sse3)
+set(MY_LIB_LINK_LIBRARIES -lpll-avx-pthreads)
 add_subdirectory(data)
 
 set(SOURCE_FILES
