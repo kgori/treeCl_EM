@@ -99,6 +99,7 @@ public:
     void tree_search(bool optimise_model);
     std::thread tree_search_in_thread();
     std::thread optimise_in_thread();
+    void set_tree(std::string nwk);
 
 public:
     partitionList* partitions = nullptr;

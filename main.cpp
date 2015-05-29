@@ -93,6 +93,18 @@ string get_tree(pllInstance* tr, partitionList* partitions) {
     return tree;
 }
 
+vector<int> get_within_group_index(const vector<int>& assignment) {
+    auto max_elem = std::max_element(assignment.begin(), assignment.end());
+    int ngrp = 1 + assignment[std::distance(assignment.begin(), max_elem)];
+    vector<int> grpix(ngrp, 0);
+    vector<int> result(assignment.size(), 0);
+    for (int i = 0; i < assignment.size(); ++i) {
+        int grp = assignment[i];
+        result[i] = grpix[grp]++;
+    }
+    return result;
+}
+
 
 // Using mains for quick testing ATM
 /*
@@ -147,38 +159,41 @@ int main() {
     }
 
     for (auto& pll : insts) {
-        threads.push_back(pll->tree_search_in_thread());
+        threads.push_back(pll->optimise_in_thread());
     }
 
     for (auto& t : threads) {
         t.join();
     }
 
-    double lnlsum;
+    double lnlsum = 0;
     for (auto& pll : insts) {
         lnlsum += pll->get_likelihood();
         cout << pll->get_likelihood() << " " << pll->get_likelihood() / (*pll)[0]->width << endl;
     }
     cout << "LNLsum = " << lnlsum << endl;
 
-    // Put in own scope
+    // Put in own scope - this could be a class / collection of functions
     {
+        // BREAK INTO FN1 - Build vector of PLLs for each cluster
+        // --------------
         // Assignments of loci to clusters (position in vector corresponds to locus,
         //                                  value at position corresponds to group index)
-        vector<int> assgn{0, 0, 0, 0, 1, 1, 2, 1, 1, 1, 2, 2, 2, 2, 0};
+        vector<int> assgn{0, 0, 0, 1, 0, 2, 1, 2, 1, 1, 0, 2, 2, 0, 2};
+
+        // Bookkeeping: within group index
+        auto wgi = get_within_group_index(assgn);
 
         // Number of groups is 1 higher than maximum group index (assume 0-based indexing)
-        int numgrps = 1 + *(std::max_element(assgn.begin(), assgn.end()));
-        cout << "Number of groups = " << numgrps << endl;
+        auto max_elem = std::max_element(assgn.begin(), assgn.end());
+        int numgrps = 1 + assgn[std::distance(assgn.begin(), max_elem)];
 
         // Initialise vector to hold PLL for each group
         vector<PLLUPtr> grps;
         grps.reserve(numgrps);
-        cout << "Init & reserve grps" << endl;
 
         // Initialise vector to build up partition info for each group
-        vector<vector<string>> qs(numgrps, vector<string>());
-        cout << "Init qs to size " << qs.size() << endl;
+        vector<vector<string>> qs(numgrps);
 
         for (int i = 0; i < assgn.size(); ++i) {
             int group_index = assgn[i];
@@ -191,7 +206,9 @@ int main() {
             q = parse_partitions(qstring.c_str());
             grps.push_back(make_unique<PLL>(attr, q.get(), al.get()));
         }
+        // END FN1
 
+        // BREAK INTO FN2 - Do computation with vector of PLLs
         // Initialise vector of threads to do PLL computation
         std::vector<std::thread> thrds;
         for (auto& pll : grps) {
@@ -201,34 +218,52 @@ int main() {
         for (auto& t : thrds) {
             t.join(); // collect results
         }
+        // END FN2
 
+        // BREAK INTO FN3 - Process results
         // Process results (just printing for now)
-        double lnlsum = 0;
+        lnlsum = 0;
         for (auto& pll : grps) {
             lnlsum += pll->get_likelihood();
             cout << pll->get_likelihood() << endl;
         }
         cout << "LNLsum = " << lnlsum << endl;
+
+        // These arrays (just printed ATM) will form basis for making moves between clusters
+        for (auto& locus : insts) {
+            for (auto& pll : grps) {
+                locus->set_tree(pll->get_tree());
+                cout << locus->get_likelihood() << " ";
+            }
+            cout << endl;
+        }
+        // END FN3
+
+        // FN4 - Do reassignments
+        // ...
     }
 
-    // Put in own scope
+    // Put in own scope - this could be a class / collection of functions
     {
+        // BREAK INTO FN1 - Build vector of PLLs for each cluster
+        // --------------
         // Assignments of loci to clusters (position in vector corresponds to locus,
         //                                  value at position corresponds to group index)
         vector<int> assgn{0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2};
 
+        // Bookkeeping: within group index
+        auto wgi = get_within_group_index(assgn);
+
         // Number of groups is 1 higher than maximum group index (assume 0-based indexing)
-        int numgrps = 1 + *(std::max_element(assgn.begin(), assgn.end()));
-        cout << "Number of groups = " << numgrps << endl;
+        auto max_elem = std::max_element(assgn.begin(), assgn.end());
+        int numgrps = 1 + assgn[std::distance(assgn.begin(), max_elem)];
 
         // Initialise vector to hold PLL for each group
         vector<PLLUPtr> grps;
         grps.reserve(numgrps);
-        cout << "Init & reserve grps" << endl;
 
         // Initialise vector to build up partition info for each group
-        vector<vector<string>> qs(numgrps, vector<string>());
-        cout << "Init qs to size " << qs.size() << endl;
+        vector<vector<string>> qs(numgrps);
 
         for (int i = 0; i < assgn.size(); ++i) {
             int group_index = assgn[i];
@@ -241,7 +276,9 @@ int main() {
             q = parse_partitions(qstring.c_str());
             grps.push_back(make_unique<PLL>(attr, q.get(), al.get()));
         }
+        // END FN1
 
+        // BREAK INTO FN2 - Do computation with vector of PLLs
         // Initialise vector of threads to do PLL computation
         std::vector<std::thread> thrds;
         for (auto& pll : grps) {
@@ -251,109 +288,33 @@ int main() {
         for (auto& t : thrds) {
             t.join(); // collect results
         }
+        // END FN2
 
+        // BREAK INTO FN3 - Process results
         // Process results (just printing for now)
-        double lnlsum = 0;
+        lnlsum = 0;
         for (auto& pll : grps) {
             lnlsum += pll->get_likelihood();
             cout << pll->get_likelihood() << endl;
         }
         cout << "LNLsum = " << lnlsum << endl;
+
+        // These arrays (just printed ATM) will form basis for making moves between clusters
+        for (auto& locus : insts) {
+            for (auto& pll : grps) {
+                locus->set_tree(pll->get_tree());
+                cout << locus->get_likelihood() << " ";
+            }
+            cout << endl;
+        }
+        // END FN3
+
+        // FN4 - Do reassignments
+        // ...
     }
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>( t2 - t1 ).count();
-    cout << duration;
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+    cout << "Program runtime: " << duration / 1000.0 << "s";
     return 0;
 }
-
-
-/*
-int main() {
-    pllInstanceAttr attr;
-    attr.rateHetModel = PLL_GAMMA;
-    attr.fastScaling = PLL_FALSE;
-    attr.saveMemory = PLL_FALSE;
-    attr.useRecom = PLL_FALSE;
-    attr.randomNumberSeed = 12345;
-    attr.numberOfThreads = 1;
-
-    vector<string> partitions = readlines(MYPART);
-    queueUPtr q;
-    alignmentUPtr al;
-    q = parse_partitions(stringjoin(partitions.begin(), partitions.end(), '\n').c_str());
-    al = parse_alignment_file(MYFILE);
-    auto pll = make_unique<PLL>(attr, q.get(), al.get());
-    std::vector<std::vector<int>> origWeights;
-    for (int i = 0; i<pll->get_number_of_partitions(); ++i) {
-        auto part = (*pll)[i];
-        std::vector<int> v;
-        v.reserve(part->width);
-        v.assign(part->wgt, part->wgt + part->width);
-        origWeights.push_back(v);
-        print_container(v.begin(), v.end());
-        cout << endl;
-    }
-
-    cout << "Likelihood = " << pll->get_likelihood() << endl;
-
-    for (int i = 1; i < pll->get_number_of_partitions(); ++i) {
-        auto part = (*pll)[i];
-        for (int j = 0; j < part->width; ++j) {
-            part->wgt[j] = 0;
-        }
-    }
-
-    cout << "Likelihood = " << pll->get_likelihood() << endl;
-    pll->tree_search(true);
-    cout << "Likelihood = " << pll->get_likelihood() << endl;
-
-    std::vector<std::string> trees;
-    std::vector<PLLUPtr> insts;
-
-
-    return 0;
-    for (string& part : partitions) {
-        al = parse_alignment_file(MYFILE);
-//        q = parse_partitions(stringjoin(partitions).c_str());
-        q = parse_partitions(part.c_str());
-//        auto pll = make_unique<PLL>(attr, q.get(), al.get());
-//        auto pll2 = std::move(pll);
-        insts.push_back(make_unique<PLL>(attr, q.get(), al.get()));
-    }
-
-//    for (auto it = insts.begin(); it != insts.end(); ++it ) {
-//        auto pll = it->get();
-//        pll->tree_search(true);
-//        cout << pll->get_likelihood() << " " << pll->get_likelihood() / (*pll)[0]->width << endl;
-////        trees.push_back(pll->get_tree());
-//    }
-
-    std::vector<std::thread> threads;
-    for (auto& pll : insts) {
-        threads.push_back(pll->tree_search_in_thread());
-    }
-
-    for (auto& t : threads) {
-        t.join();
-    }
-
-    for (auto& pll : insts) {
-        cout << pll->get_likelihood() << " " << pll->get_likelihood() / (*pll)[0]->width << endl;
-    }
-
-//    q = parse_partitions(partitions[0].c_str());
-//    auto pll = make_unique<PLL>(attr, q.get(), al.get());
-//
-//    pll->optimise(true, true, true, true, 0.1);
-//    cout << pll->get_likelihood() << endl;
-//    cout << pll->get_tree() << endl;
-//    for (int i=0; i < pll->get_number_of_partitions(); ++i) {
-//        cout << (*pll)[i]->width << " "
-//             << (*pll)[i]->partitionLH << " "
-//             << (*pll)[i]->partitionLH / (*pll)[i]->width << endl;
-//    }
-
-    return 0;
-}
-*/

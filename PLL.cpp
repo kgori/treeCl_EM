@@ -114,3 +114,9 @@ void PLL::adjustAlignmentLength(partitionList *partitions, pllAlignmentData *ali
     }
     alignment->sequenceLength = usedAlLength;
 }
+
+void PLL::set_tree(std::string nwk) {
+    newickUPtr newick(pllNewickParseString(nwk.c_str()), NewickDeleter());
+    pllTreeInitTopologyNewick(tr.get(), newick.get(), PLL_FALSE);
+    pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
+}
