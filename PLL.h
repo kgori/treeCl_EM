@@ -12,11 +12,14 @@ class PLL{
 
 public:
     PLL(pllInstanceAttr& attr, pllQueue* queue, pllAlignmentData* alignment) {
-        tr = instanceUPtr(pllCreateInstance(&attr));
+        tr = instanceUPtr(pllCreateInstance(&attr), InstanceDeleter());
         partitions = pllPartitionsCommit(queue, alignment);
         pllAlignmentRemoveDups(alignment, partitions);
 
         // Here do the adjustment of alignment length in case partition does not cover all sites
+        // THIS IS A HACK TO TRY TO MAKE THREADING WORK WITH INCOMPLETE PARTITION COVERAGE
+        // Given the memory issues with multiple PLL instances all using multithreading,
+        // this is the least of my worries
         adjustAlignmentLength(partitions, alignment);
 
         pllTreeInitTopologyRandom(tr.get(), alignment->sequenceCount, alignment->sequenceLabels);
@@ -25,6 +28,9 @@ public:
         }
         pllComputeRandomizedStepwiseAdditionParsimonyTree(tr.get(), partitions);
         pllInitModel(tr.get(), partitions);
+
+        // Here reinitialise the tree because, for some reason, pllOptimizeBranchLengths doesn't
+        // work with random trees or parsimony trees. Maybe it's the tiny branches, who knows?
         pllTreeToNewick(tr->tree_string, tr.get(), partitions,
                         tr->start->back, PLL_TRUE, PLL_TRUE,
                         PLL_FALSE, PLL_FALSE, PLL_FALSE,
@@ -34,7 +40,7 @@ public:
     }
 
     PLL(pllInstanceAttr& attr, pllQueue* queue, pllNewickTree* newick, pllAlignmentData* alignment) {
-        tr = instanceUPtr(pllCreateInstance(&attr));
+        tr = instanceUPtr(pllCreateInstance(&attr), InstanceDeleter());
         partitions = pllPartitionsCommit(queue, alignment);
         pllAlignmentRemoveDups(alignment, partitions);
 
@@ -50,32 +56,30 @@ public:
     }
 
     // Move constructor
-    PLL (PLL&& other) noexcept : partitions(std::move(other.partitions)), tr(std::move(other.tr)) {
-        std::cout << "Move constructed PLL" << std::endl;
+    PLL (PLL&& other) noexcept : partitions(other.partitions), tr(std::move(other.tr)) {
+        other.partitions = nullptr;
     }
 
     /** Move assignment operator */
     PLL& operator= (PLL&& other) noexcept {
         // simplified move-constructor that also protects against move-to-self.
-        partitions = std::move(other.partitions);
-        tr = std::move(other.tr);
-        std::cout << "Move assigned PLL" << std::endl;
+        std::swap(partitions, other.partitions);
+        std::swap(tr, other.tr);
         return *this;
     }
 
-    // Delete copy assignment
-    PLL& operator=(const PLL& other) = delete;
-
-    // Delete copy constructor
-    PLL(const PLL& other) = delete;
-
     // Destructor
     ~PLL() noexcept {
-        if (partitions) {
+        if (partitions && tr) {
             pllPartitionsDestroy(tr.get(), &partitions);
-            std::cout << "Destroyed partitions" << std::endl;
         }
     }
+
+    // Copy constructor
+    PLL(const PLL& other) = delete;
+
+    // Copy assignment
+    PLL& operator=(const PLL& other) = delete;
 
     void optimise(bool rates, bool freqs, bool alphas, bool branches, double epsilon=0.0001, bool verbose=false);
     std::string get_tree();
@@ -94,12 +98,11 @@ public:
     void tree_search(bool optimise_model);
 
 public:
-    partitionList* partitions;
+    partitionList* partitions = nullptr;
     instanceUPtr tr;
     void adjustAlignmentLength(partitionList* partitions, pllAlignmentData* alignment);
 };
 
 typedef std::unique_ptr<PLL> PLLUPtr;
-typedef PLL *PLLPtr;
 
 #endif //TREECL_EM_PLL_H

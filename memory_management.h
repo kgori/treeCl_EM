@@ -13,39 +13,30 @@ extern "C" {
 struct AlignmentDeleter {
     void operator()(pllAlignmentData *pAlignment) {
         pllAlignmentDataDestroy(pAlignment);
-        std::cout << "Alignment destroyed" << std::endl;
+//        std::cout << "Alignment destroyed" << std::endl;
     }
 };
 
 struct QueueDeleter {
     void operator()(pllQueue *pQueue) {
         pllQueuePartitionsDestroy(&pQueue);
-        std::cout << "Queue destroyed" << std::endl;
+//        std::cout << "Queue destroyed" << std::endl;
     }
 };
 
 struct NewickDeleter {
     void operator()(pllNewickTree *pNewick) {
         pllNewickParseDestroy(&pNewick);
-        std::cout << "Newick destroyed" << std::endl;
+//        std::cout << "Newick destroyed" << std::endl;
     }
 };
 
 struct InstanceDeleter {
     void operator()(pllInstance *pInstance) {
         pllDestroyInstance(pInstance);
-        std::cout << "Instance Destroyed" << std::endl;
+//        std::cout << "Instance Destroyed" << std::endl;
     }
 };
-
-//class Instance {
-//public:
-//    Instance();
-//    ~Instance() {
-//        pllDestroyInstance(pInstance);
-//    }
-//    pllInstance *pInstance;
-//};
 
 typedef std::unique_ptr<pllAlignmentData, AlignmentDeleter> alignmentUPtr;
 typedef std::unique_ptr<pllNewickTree, NewickDeleter> newickUPtr;

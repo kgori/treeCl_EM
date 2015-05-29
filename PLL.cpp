@@ -87,7 +87,6 @@ void PLL::optimise(bool rates, bool freqs, bool alphas, bool branches, double ep
     }
 }
 
-
 const int PLL::get_number_of_partitions() const {
     return partitions->numberOfPartitions;
 }

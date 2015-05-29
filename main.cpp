@@ -9,8 +9,8 @@
 
 using namespace std;
 
-string MYFILE="data/conc.phy";
-string MYPART="data/conc.partitions.txt";
+string MYFILE="/Users/kgori/Documents/repositories/treeCl_EM/data/conc.phy";
+string MYPART="/Users/kgori/Documents/repositories/treeCl_EM/data/conc.partitions.txt";
 
 bool is_file(string filename) {
     ifstream fl(filename.c_str());
@@ -28,10 +28,11 @@ alignmentUPtr parse_alignment_file(string path) {
         throw exception();
     }
     alignmentUPtr alignment;
-    alignment = alignmentUPtr(pllParseAlignmentFile(PLL_FORMAT_PHYLIP, path.c_str()));
+    AlignmentDeleter del;
+    alignment = alignmentUPtr(pllParseAlignmentFile(PLL_FORMAT_PHYLIP, path.c_str()), del);
     if (!alignment) {
         //cout << "Trying to parse as fasta" << endl;
-        alignment = alignmentUPtr(pllParseAlignmentFile(PLL_FORMAT_FASTA, path.c_str()));
+        alignment = alignmentUPtr(pllParseAlignmentFile(PLL_FORMAT_FASTA, path.c_str()), del);
     }
     if (!alignment) {
         cerr << "Couldn't parse the alignment at " << path << endl;
@@ -41,14 +42,12 @@ alignmentUPtr parse_alignment_file(string path) {
 }
 
 queueUPtr parse_partitions(string partitions) {
-    queueUPtr q;
     if (is_file(partitions)) {
-        q = queueUPtr(pllPartitionParse(partitions.c_str()));
+        return queueUPtr(pllPartitionParse(partitions.c_str()), QueueDeleter());
     }
     else {
-        q = queueUPtr(pllPartitionParseString(partitions.c_str()));
+        return queueUPtr(pllPartitionParseString(partitions.c_str()), QueueDeleter());
     }
-    return q;
 }
 
 vector<string> readlines(string& filename) {
@@ -97,19 +96,23 @@ int main() {
     vector<string> partitions = readlines(MYPART);
 
     queueUPtr q;
+    alignmentUPtr al;
+    q = parse_partitions(join(partitions).c_str());
 
     std::vector<std::string> trees;
     std::vector<PLLUPtr> insts;
+
     for (string& part : partitions) {
         auto al = parse_alignment_file(MYFILE);
 //        q = parse_partitions(join(partitions).c_str());
         q = parse_partitions(part.c_str());
-        auto pll = make_unique<PLL>(attr, q.get(), al.get());
+//        auto pll = make_unique<PLL>(attr, q.get(), al.get());
 //        auto pll2 = std::move(pll);
         insts.push_back(make_unique<PLL>(attr, q.get(), al.get()));
     }
 
-    for (auto& pll : insts) {
+    for (auto it = insts.begin(); it != insts.end(); ++it ) {
+        auto pll = it->get();
         pll->optimise(false, false, false, true);
         cout << pll->get_likelihood() << " " << pll->get_likelihood() / (*pll)[0]->width << endl;
         trees.push_back(pll->get_tree());

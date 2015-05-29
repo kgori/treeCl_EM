@@ -1,0 +1,46 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/kgori/Documents/repositories/treeCl_EM/PLL.cpp
+pll/pll.h
+-
+PLL.h
+/Users/kgori/Documents/repositories/treeCl_EM/PLL.h
+
+/Users/kgori/Documents/repositories/treeCl_EM/PLL.h
+pll/pll.h
+-
+memory_management.h
+/Users/kgori/Documents/repositories/treeCl_EM/memory_management.h
+
+/Users/kgori/Documents/repositories/treeCl_EM/main.cpp
+algorithm
+-
+fstream
+-
+iostream
+-
+sstream
+-
+vector
+-
+pll/pll.h
+-
+memory_management.h
+/Users/kgori/Documents/repositories/treeCl_EM/memory_management.h
+PLL.h
+/Users/kgori/Documents/repositories/treeCl_EM/PLL.h
+
+/Users/kgori/Documents/repositories/treeCl_EM/memory_management.h
+pll/pll.h
+/Users/kgori/Documents/repositories/treeCl_EM/pll/pll.h
+iostream
+-
+memory
+-
+
