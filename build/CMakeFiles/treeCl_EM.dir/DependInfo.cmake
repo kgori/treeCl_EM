@@ -4,8 +4,8 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/Users/kgori/Documents/repositories/treeCl_EM/PLL.cpp" "/Users/kgori/Documents/repositories/treeCl_EM/build/CMakeFiles/treeCl_EM.dir/PLL.cpp.o"
-  "/Users/kgori/Documents/repositories/treeCl_EM/main.cpp" "/Users/kgori/Documents/repositories/treeCl_EM/build/CMakeFiles/treeCl_EM.dir/main.cpp.o"
+  "/Users/kgori/ClionProjects/treeCl_EM/PLL.cpp" "/Users/kgori/ClionProjects/treeCl_EM/build/CMakeFiles/treeCl_EM.dir/PLL.cpp.o"
+  "/Users/kgori/ClionProjects/treeCl_EM/main.cpp" "/Users/kgori/ClionProjects/treeCl_EM/build/CMakeFiles/treeCl_EM.dir/main.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "AppleClang")
 

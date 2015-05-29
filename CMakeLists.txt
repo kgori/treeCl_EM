@@ -8,6 +8,6 @@ set(SOURCE_FILES
     PLL.cpp
     main.cpp)
 
-add_executable(treeCl_EM ${SOURCE_FILES} memory_management.h)
+add_executable(treeCl_EM ${SOURCE_FILES})
 TARGET_LINK_LIBRARIES(treeCl_EM ${MY_LIB_LINK_LIBRARIES})
 

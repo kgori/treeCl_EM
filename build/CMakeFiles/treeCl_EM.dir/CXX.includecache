@@ -6,19 +6,21 @@
 
 #IncludeRegexTransform: 
 
-/Users/kgori/Documents/repositories/treeCl_EM/PLL.cpp
+/Users/kgori/ClionProjects/treeCl_EM/PLL.cpp
 pll/pll.h
 -
 PLL.h
-/Users/kgori/Documents/repositories/treeCl_EM/PLL.h
+/Users/kgori/ClionProjects/treeCl_EM/PLL.h
 
-/Users/kgori/Documents/repositories/treeCl_EM/PLL.h
+/Users/kgori/ClionProjects/treeCl_EM/PLL.h
 pll/pll.h
 -
+thread
+-
 memory_management.h
-/Users/kgori/Documents/repositories/treeCl_EM/memory_management.h
+/Users/kgori/ClionProjects/treeCl_EM/memory_management.h
 
-/Users/kgori/Documents/repositories/treeCl_EM/main.cpp
+/Users/kgori/ClionProjects/treeCl_EM/main.cpp
 algorithm
 -
 fstream
@@ -32,13 +34,13 @@ vector
 pll/pll.h
 -
 memory_management.h
-/Users/kgori/Documents/repositories/treeCl_EM/memory_management.h
+/Users/kgori/ClionProjects/treeCl_EM/memory_management.h
 PLL.h
-/Users/kgori/Documents/repositories/treeCl_EM/PLL.h
+/Users/kgori/ClionProjects/treeCl_EM/PLL.h
 
-/Users/kgori/Documents/repositories/treeCl_EM/memory_management.h
+/Users/kgori/ClionProjects/treeCl_EM/memory_management.h
 pll/pll.h
-/Users/kgori/Documents/repositories/treeCl_EM/pll/pll.h
+/Users/kgori/ClionProjects/treeCl_EM/pll/pll.h
 iostream
 -
 memory

@@ -15,6 +15,7 @@ std::string PLL::get_tree() {
 }
 
 double PLL::get_likelihood() {
+    pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
     return tr->likelihood;
 }
 
@@ -95,6 +96,14 @@ void PLL::tree_search(bool optimise_model) {
     pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
     int pll_bool = optimise_model ? PLL_TRUE : PLL_FALSE;
     pllRaxmlSearchAlgorithm(tr.get(), partitions, pll_bool);
+}
+
+std::thread PLL::tree_search_in_thread() {
+    return std::thread( [this] { this->tree_search(true); } );
+}
+
+std::thread PLL::optimise_in_thread() {
+    return std::thread( [this] { this->optimise(false, false, false, true); } );
 }
 
 void PLL::adjustAlignmentLength(partitionList *partitions, pllAlignmentData *alignment) {

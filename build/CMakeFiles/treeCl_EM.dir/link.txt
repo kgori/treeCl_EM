@@ -1,1 +1,1 @@
-/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++    -std=c++1y -g -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/treeCl_EM.dir/PLL.cpp.o CMakeFiles/treeCl_EM.dir/main.cpp.o  -o treeCl_EM  -lpll-avx-pthreads 
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++    -std=c++1y -g -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/treeCl_EM.dir/PLL.cpp.o CMakeFiles/treeCl_EM.dir/main.cpp.o  -o treeCl_EM  -lpll-avx 

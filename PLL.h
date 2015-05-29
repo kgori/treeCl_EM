@@ -6,6 +6,7 @@
 #define TREECL_EM_PLL_H
 
 #include <pll/pll.h>
+#include <thread>
 #include "memory_management.h"
 typedef pInfo *pInfoPtr;
 class PLL{
@@ -96,6 +97,8 @@ public:
     };
 
     void tree_search(bool optimise_model);
+    std::thread tree_search_in_thread();
+    std::thread optimise_in_thread();
 
 public:
     partitionList* partitions = nullptr;

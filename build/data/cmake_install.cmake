@@ -1,4 +1,4 @@
-# Install script for directory: /Users/kgori/Documents/repositories/treeCl_EM/data
+# Install script for directory: /Users/kgori/ClionProjects/treeCl_EM/data
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

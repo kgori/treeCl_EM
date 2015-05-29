@@ -35,10 +35,10 @@ RM = /usr/local/Cellar/cmake/3.2.2/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /Users/kgori/Documents/repositories/treeCl_EM
+CMAKE_SOURCE_DIR = /Users/kgori/ClionProjects/treeCl_EM
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/kgori/Documents/repositories/treeCl_EM/build
+CMAKE_BINARY_DIR = /Users/kgori/ClionProjects/treeCl_EM/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/treeCl_EM.dir/depend.make
@@ -51,17 +51,17 @@ include CMakeFiles/treeCl_EM.dir/flags.make
 
 CMakeFiles/treeCl_EM.dir/PLL.cpp.o: CMakeFiles/treeCl_EM.dir/flags.make
 CMakeFiles/treeCl_EM.dir/PLL.cpp.o: ../PLL.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /Users/kgori/Documents/repositories/treeCl_EM/build/CMakeFiles $(CMAKE_PROGRESS_1)
+	$(CMAKE_COMMAND) -E cmake_progress_report /Users/kgori/ClionProjects/treeCl_EM/build/CMakeFiles $(CMAKE_PROGRESS_1)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object CMakeFiles/treeCl_EM.dir/PLL.cpp.o"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/treeCl_EM.dir/PLL.cpp.o -c /Users/kgori/Documents/repositories/treeCl_EM/PLL.cpp
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/treeCl_EM.dir/PLL.cpp.o -c /Users/kgori/ClionProjects/treeCl_EM/PLL.cpp
 
 CMakeFiles/treeCl_EM.dir/PLL.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/treeCl_EM.dir/PLL.cpp.i"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /Users/kgori/Documents/repositories/treeCl_EM/PLL.cpp > CMakeFiles/treeCl_EM.dir/PLL.cpp.i
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /Users/kgori/ClionProjects/treeCl_EM/PLL.cpp > CMakeFiles/treeCl_EM.dir/PLL.cpp.i
 
 CMakeFiles/treeCl_EM.dir/PLL.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/treeCl_EM.dir/PLL.cpp.s"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /Users/kgori/Documents/repositories/treeCl_EM/PLL.cpp -o CMakeFiles/treeCl_EM.dir/PLL.cpp.s
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /Users/kgori/ClionProjects/treeCl_EM/PLL.cpp -o CMakeFiles/treeCl_EM.dir/PLL.cpp.s
 
 CMakeFiles/treeCl_EM.dir/PLL.cpp.o.requires:
 .PHONY : CMakeFiles/treeCl_EM.dir/PLL.cpp.o.requires
@@ -74,17 +74,17 @@ CMakeFiles/treeCl_EM.dir/PLL.cpp.o.provides.build: CMakeFiles/treeCl_EM.dir/PLL.
 
 CMakeFiles/treeCl_EM.dir/main.cpp.o: CMakeFiles/treeCl_EM.dir/flags.make
 CMakeFiles/treeCl_EM.dir/main.cpp.o: ../main.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /Users/kgori/Documents/repositories/treeCl_EM/build/CMakeFiles $(CMAKE_PROGRESS_2)
+	$(CMAKE_COMMAND) -E cmake_progress_report /Users/kgori/ClionProjects/treeCl_EM/build/CMakeFiles $(CMAKE_PROGRESS_2)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object CMakeFiles/treeCl_EM.dir/main.cpp.o"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/treeCl_EM.dir/main.cpp.o -c /Users/kgori/Documents/repositories/treeCl_EM/main.cpp
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/treeCl_EM.dir/main.cpp.o -c /Users/kgori/ClionProjects/treeCl_EM/main.cpp
 
 CMakeFiles/treeCl_EM.dir/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/treeCl_EM.dir/main.cpp.i"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /Users/kgori/Documents/repositories/treeCl_EM/main.cpp > CMakeFiles/treeCl_EM.dir/main.cpp.i
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /Users/kgori/ClionProjects/treeCl_EM/main.cpp > CMakeFiles/treeCl_EM.dir/main.cpp.i
 
 CMakeFiles/treeCl_EM.dir/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/treeCl_EM.dir/main.cpp.s"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /Users/kgori/Documents/repositories/treeCl_EM/main.cpp -o CMakeFiles/treeCl_EM.dir/main.cpp.s
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /Users/kgori/ClionProjects/treeCl_EM/main.cpp -o CMakeFiles/treeCl_EM.dir/main.cpp.s
 
 CMakeFiles/treeCl_EM.dir/main.cpp.o.requires:
 .PHONY : CMakeFiles/treeCl_EM.dir/main.cpp.o.requires
@@ -123,6 +123,6 @@ CMakeFiles/treeCl_EM.dir/clean:
 .PHONY : CMakeFiles/treeCl_EM.dir/clean
 
 CMakeFiles/treeCl_EM.dir/depend:
-	cd /Users/kgori/Documents/repositories/treeCl_EM/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /Users/kgori/Documents/repositories/treeCl_EM /Users/kgori/Documents/repositories/treeCl_EM /Users/kgori/Documents/repositories/treeCl_EM/build /Users/kgori/Documents/repositories/treeCl_EM/build /Users/kgori/Documents/repositories/treeCl_EM/build/CMakeFiles/treeCl_EM.dir/DependInfo.cmake --color=$(COLOR)
+	cd /Users/kgori/ClionProjects/treeCl_EM/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /Users/kgori/ClionProjects/treeCl_EM /Users/kgori/ClionProjects/treeCl_EM /Users/kgori/ClionProjects/treeCl_EM/build /Users/kgori/ClionProjects/treeCl_EM/build /Users/kgori/ClionProjects/treeCl_EM/build/CMakeFiles/treeCl_EM.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/treeCl_EM.dir/depend
 
