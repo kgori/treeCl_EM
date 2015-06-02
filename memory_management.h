@@ -13,34 +13,30 @@ extern "C" {
 struct AlignmentDeleter {
     void operator()(pllAlignmentData *pAlignment) {
         pllAlignmentDataDestroy(pAlignment);
-//        std::cout << "Alignment destroyed" << std::endl;
     }
 };
 
 struct QueueDeleter {
     void operator()(pllQueue *pQueue) {
         pllQueuePartitionsDestroy(&pQueue);
-//        std::cout << "Queue destroyed" << std::endl;
     }
 };
 
 struct NewickDeleter {
     void operator()(pllNewickTree *pNewick) {
         pllNewickParseDestroy(&pNewick);
-//        std::cout << "Newick destroyed" << std::endl;
     }
 };
 
 struct InstanceDeleter {
     void operator()(pllInstance *pInstance) {
         pllDestroyInstance(pInstance);
-//        std::cout << "Instance Destroyed" << std::endl;
     }
 };
 
-typedef std::unique_ptr<pllAlignmentData, AlignmentDeleter> alignmentUPtr;
-typedef std::unique_ptr<pllNewickTree, NewickDeleter> newickUPtr;
-typedef std::unique_ptr<pllQueue, QueueDeleter> queueUPtr;
-typedef std::unique_ptr<pllInstance, InstanceDeleter> instanceUPtr;
+using alignmentUPtr = std::unique_ptr<pllAlignmentData, AlignmentDeleter>;
+using newickUPtr = std::unique_ptr<pllNewickTree, NewickDeleter>;
+using queueUPtr = std::unique_ptr<pllQueue, QueueDeleter>;
+using instanceUPtr = std::unique_ptr<pllInstance, InstanceDeleter>;
 
 #endif //TREECL_EM_MEMORY_MANAGEMENT_H

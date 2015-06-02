@@ -6,9 +6,11 @@
 #define TREECL_EM_PLL_H
 
 #include <pll/pll.h>
-#include <thread>
 #include "memory_management.h"
-typedef pInfo *pInfoPtr;
+#include "threadpool.h"
+
+using pInfoPtr = pInfo*;
+//typedef pInfo *pInfoPtr;
 class PLL{
 
 public:

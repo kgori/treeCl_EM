@@ -2,6 +2,7 @@
 // Created by Kevin Gori on 27/05/15.
 //
 
+#include <algorithm>
 #include <pll/pll.h>
 #include "PLL.h"
 std::string PLL::get_tree() {
