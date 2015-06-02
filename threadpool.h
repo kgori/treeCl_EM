@@ -11,6 +11,7 @@
 #include <condition_variable>
 #include <deque>
 #include <future>
+#include <iostream>
 #include <list>
 #include <memory>
 #include <queue>
@@ -90,6 +91,7 @@ public:
             return false;
         value=std::move(*data_queue.front());
         data_queue.pop();
+        return true;
     }
 
     std::shared_ptr<T> wait_and_pop()
@@ -231,7 +233,7 @@ public:
             for(unsigned i=0;i<thread_count;++i)
             {
                 queues.push_back(std::make_unique<work_stealing_queue>());
-                threads.push_back(std::thread(&thread_pool::worker_thread,this,i));
+                threads.push_back(std::thread(&thread_pool::worker_thread, this, i));
             }
         }
         catch(...)
@@ -240,6 +242,25 @@ public:
             throw;
         }
     }
+
+    thread_pool(unsigned num_threads): done(false), joiner(threads)
+    {
+        unsigned const thread_count = std::min(num_threads, std::thread::hardware_concurrency());
+        try
+        {
+            for(unsigned i=0;i<thread_count;++i)
+            {
+                queues.push_back(std::make_unique<work_stealing_queue>());
+                threads.push_back(std::thread(&thread_pool::worker_thread, this, i));
+            }
+        }
+        catch(...)
+        {
+            done=true;
+            throw;
+        }
+    }
+
 
     ~thread_pool()
     {
@@ -280,47 +301,55 @@ public:
 };
 
 
-// TEST IMPL
-template<typename T>
-struct sorter
+class simple_thread_pool
 {
-    thread_pool pool;
-
-    std::list<T> do_sort(std::list<T>& chunk_data)
+    std::atomic_bool done;
+    threadsafe_queue<std::function<void()>> work_queue;
+    std::vector<std::thread> threads;
+    join_threads joiner;
+    void worker_thread()
     {
-        if(chunk_data.empty())
+        while(!done)
         {
-            return chunk_data;
+            std::function<void()> task;
+            if(work_queue.try_pop(task))
+            {
+                task();
+            }
+            else
+            {
+                std::this_thread::yield();
+            }
         }
-
-        std::list<T> result;
-        result.splice(result.begin(),chunk_data,chunk_data.begin());
-        T const& partition_val=*result.begin();
-
-        typename std::list<T>::iterator divide_point=
-                std::partition(
-                        chunk_data.begin(),chunk_data.end(),
-                        [&](T const& val){return val<partition_val;});
-
-        std::list<T> new_lower_chunk;
-        new_lower_chunk.splice(
-                new_lower_chunk.end(),
-                chunk_data,chunk_data.begin(),
-                divide_point);
-
-        auto new_lower = pool.submit(std::bind(&sorter::do_sort,this, std::move(new_lower_chunk)));
-
-        std::list<T> new_higher(do_sort(chunk_data));
-
-        result.splice(result.end(),new_higher);
-        while(!(new_lower.wait_for(std::chrono::seconds(0)) == std::future_status::timeout))
-        {
-            pool.run_pending_task();
-        }
-
-        result.splice(result.begin(),new_lower.get());
-        return result;
     }
+public:
+    simple_thread_pool():
+            done(false),joiner(threads)
+    {
+        unsigned const thread_count=1;
+        try
+        {
+            for(unsigned i=0;i<thread_count;++i)
+            {
+                threads.push_back(std::thread(&simple_thread_pool::worker_thread, this));
+            }
+        }
+        catch(...)
+        {
+            done=true;
+            throw;
+        }
+    }
+    ~simple_thread_pool()
+    {
+        done=true;
+    }
+    template<typename FunctionType>
+    void submit(FunctionType f)
+    {
+        work_queue.push(f);
+    }
+    bool is_done() { return done; };
 };
 
 #endif //TREECL_EM_THREADPOOL_H

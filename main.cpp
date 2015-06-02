@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -12,19 +13,6 @@
 
 std::string MYFILE="data/conc.phy";
 std::string MYPART="data/conc.partitions.txt";
-
-//TEST FN
-template<typename T>
-std::list<T> parallel_quick_sort(std::list<T> input)
-{
-    if(input.empty())
-    {
-        return input;
-    }
-    sorter<T> s;
-
-    return s.do_sort(input);
-}
 
 bool is_file(std::string filename) {
     std::ifstream fl(filename.c_str());
@@ -150,6 +138,13 @@ int main() {
 }
 
 */
+
+void f() {
+    std::this_thread::sleep_for (std::chrono::milliseconds(250));
+    //std::cout << "*!" << std::endl;
+}
+
+
 int main() {
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
     pllInstanceAttr attr;
@@ -165,6 +160,23 @@ int main() {
     alignmentUPtr al;
     std::vector<PLLUPtr> insts;
     std::vector<std::thread> threads;
+
+    // How to do a thread pool - submit jobs, and collect returned futures as handles to the submitted jobs
+    //                         - call get() on the futures to collect results and block until all jobs are processed
+    thread_pool pool;
+    std::vector<std::future<void>> futures;
+    for (int i=0; i<99;++i) {
+        futures.push_back(pool.submit(f));
+    }
+
+    for (int i=0; i<99;++i) {
+        futures[i].get();
+    }
+
+
+//    std::this_thread::sleep_for (std::chrono::milliseconds(5000));
+
+    return 0;
 
     for (int i = 0; i < partitions.size(); ++i) {
         al = parse_alignment_file(MYFILE);
@@ -329,9 +341,5 @@ int main() {
     std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
     std::cout << "Program runtime: " << duration / 1000.0 << "s" << std::endl;
-    std::list<int> l{15, 15, 20, 7, 16, 2, 19, 17, 10, 8, 4, 0, 2, 10, 9, 20, 17, 16, 7, 18, 4, 17, 8, 19, 4, 6, 4, 20, 4, 9, 5, 16, 19, 14, 4, 18, 2, 10, 3, 10, 0, 9, 8, 9, 0, 15, 10, 19, 2, 7, 19, 12, 3, 0, 11, 16, 6, 20, 18, 20, 18, 18, 14, 13, 19, 6, 0, 4, 20, 7, 5, 13, 4, 5, 1, 2, 1, 12, 1, 2, 18, 18, 18, 0, 19, 13, 3, 18, 2, 19, 1, 11, 17, 16, 16, 9, 7, 8, 4, 20};
-    print_container(l.begin(), l.end());
-    std::list<int> s = parallel_quick_sort(l);
-    print_container(s.begin(), s.end());
     return 0;
 }
