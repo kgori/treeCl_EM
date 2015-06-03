@@ -97,7 +97,7 @@ public:
     std::shared_ptr<T> wait_and_pop()
     {
         std::unique_lock<std::mutex> lk(mut);
-        data_cond.wait(lk,[this]{return !data_queue.empty();});
+        data_cond.wait(lk, [this]{ return !data_queue.empty(); });
         std::shared_ptr<T> res=data_queue.front();
         data_queue.pop();
         return res;
@@ -326,7 +326,7 @@ public:
     simple_thread_pool():
             done(false),joiner(threads)
     {
-        unsigned const thread_count=1;
+        unsigned const thread_count=std::thread::hardware_concurrency();
         try
         {
             for(unsigned i=0;i<thread_count;++i)

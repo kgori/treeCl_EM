@@ -4,10 +4,8 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include <vector>
+#include <utility>
 #include <pll/pll.h>
-#include "memory_management.h"
-#include "threadpool.h"
 #include "PLL.h"
 
 
@@ -68,7 +66,9 @@ std::vector<std::string> readlines(const std::string& filename) {
 template<typename Iter>
 std::string stringjoin(Iter it, Iter end, char delim = '\n') {
     std::ostringstream oss;
-    for (;it != end - 1; ++it) {
+    if (it == end) return oss.str();
+    --end;
+    for (;it != end; ++it) {
         oss << *it << delim;
     }
     oss << *(it);
@@ -107,43 +107,26 @@ std::vector<int> get_within_group_index(const std::vector<int>& assignment) {
     return result;
 }
 
-
-// Using mains for quick testing ATM
 /*
-int main() {
-    high_resolution_clock::time_point t1 = high_resolution_clock::now();
-    pllInstanceAttr attr;
-    attr.rateHetModel = PLL_GAMMA;
-    attr.fastScaling = PLL_FALSE;
-    attr.saveMemory = PLL_FALSE;
-    attr.useRecom = PLL_FALSE;
-    attr.randomNumberSeed = 12345;
-    attr.numberOfThreads = 8;
+ * Function wrapper for multithreaded execution in threadpool.
+ *
+ * Pass in a reference to a member function [that returns void], the number of threads, a vector of unique pointers to
+ * the data items to operate on, and the arguments that will be forwarded to the function
+ */
+template <typename FunctionType, typename ValueType, typename ...Args>
+void threadpool(FunctionType&& fn, unsigned nthreads, std::vector<std::unique_ptr<ValueType>>& data, Args&&... args) {
+    thread_pool pool(nthreads);
+    std::vector<std::future<void>> futures;
 
-    std::vector<std::string> partitions = readlines(MYPART);
-    queueUPtr q;
-    alignmentUPtr al;
-
-    for (int i = 0; i < partitions.size(); ++i) {
-        al = parse_alignment_file(MYFILE);
-        q = parse_partitions(partitions[i].c_str());
-        auto pll = std::make_unique<PLL>(attr, q.get(), al.get());
-        pll->tree_search(true);
-        std::cout << "Likelihood = " << pll->get_likelihood() << std::endl;
+    for (auto& data_item : data) {
+        auto bound_fn = std::bind(fn, data_item.get(), std::forward<Args>(args)...);
+        futures.push_back(pool.submit(bound_fn));
     }
-    high_resolution_clock::time_point t2 = high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-    std::cout << duration;
-    return 0;
+
+    for (auto& fut : futures) {
+        fut.get();
+    }
 }
-
-*/
-
-void f() {
-    std::this_thread::sleep_for (std::chrono::milliseconds(250));
-    //std::cout << "*!" << std::endl;
-}
-
 
 int main() {
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
@@ -159,24 +142,6 @@ int main() {
     queueUPtr q;
     alignmentUPtr al;
     std::vector<PLLUPtr> insts;
-    std::vector<std::thread> threads;
-
-    // How to do a thread pool - submit jobs, and collect returned futures as handles to the submitted jobs
-    //                         - call get() on the futures to collect results and block until all jobs are processed
-    thread_pool pool;
-    std::vector<std::future<void>> futures;
-    for (int i=0; i<99;++i) {
-        futures.push_back(pool.submit(f));
-    }
-
-    for (int i=0; i<99;++i) {
-        futures[i].get();
-    }
-
-
-//    std::this_thread::sleep_for (std::chrono::milliseconds(5000));
-
-    return 0;
 
     for (int i = 0; i < partitions.size(); ++i) {
         al = parse_alignment_file(MYFILE);
@@ -184,13 +149,7 @@ int main() {
         insts.push_back(std::make_unique<PLL>(attr, q.get(), al.get()));
     }
 
-    for (auto& pll : insts) {
-        threads.push_back(pll->optimise_in_thread());
-    }
-
-    for (auto& t : threads) {
-        t.join();
-    }
+    threadpool(&PLL::optimise, 8, insts, true, true, true, true, 0.01, false);
 
     double lnlsum = 0;
     for (auto& pll : insts) {
@@ -236,13 +195,7 @@ int main() {
 
         // BREAK INTO FN2 - Do computation with vector of PLLs
         // Initialise vector of threads to do PLL computation
-        {
-            std::vector<std::thread> thrds;
-            join_threads joiner(thrds);
-            for (auto& pll : grps) {
-                thrds.push_back(pll->optimise_in_thread()); // spawn thread
-            }
-        }
+        threadpool(&PLL::optimise, grps.size(), grps, false, false, false, true, 0.001, false);
         // END FN2
 
         // BREAK INTO FN3 - Process results
@@ -305,14 +258,7 @@ int main() {
 
         // BREAK INTO FN2 - Do computation with vector of PLLs
         // Initialise vector of threads to do PLL computation
-        std::vector<std::thread> thrds;
-        for (auto& pll : grps) {
-            thrds.push_back(pll->optimise_in_thread()); // spawn thread
-        }
-
-        for (auto& t : thrds) {
-            t.join(); // collect results
-        }
+        threadpool(&PLL::optimise, grps.size(), grps, false, false, false, true, 0.001, false);
         // END FN2
 
         // BREAK INTO FN3 - Process results
