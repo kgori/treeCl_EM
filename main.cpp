@@ -202,7 +202,7 @@ double reassign(std::vector<int> assignment,
     for (int i=0; i<numgrps; ++i) {
         lnlsum += grps[i]->get_likelihood();
         std::string tree = grps[i]->get_tree();
-        threadpool(&PLL::set_tree, 1, insts, tree); // SIGSEGV??
+        threadpool(&PLL::set_tree, insts.size(), insts, tree); // SIGSEGV??
         for (int j=0; j < insts.size(); ++j) {
             reassignment_matrix[j][i] = insts[j]->get_likelihood();
         }
@@ -215,6 +215,7 @@ double reassign(std::vector<int> assignment,
     return lnlsum;
 }
 
+
 int main()
 {
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
@@ -225,6 +226,7 @@ int main()
     attr.useRecom = PLL_FALSE;
     attr.randomNumberSeed = 12345;
     attr.numberOfThreads = 1;
+
 
     std::vector<std::string> partitions = readlines(MYPART);
     queueUPtr q;

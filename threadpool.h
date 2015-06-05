@@ -169,9 +169,9 @@ public:
         return true;
     }
 
-    bool try_steal(data_type& res)
+    bool try_steal(data_type& res)  // TODO: SIGSEGV HERE
     {
-        std::lock_guard<std::mutex> lock(the_mutex);
+        std::lock_guard<std::mutex> lock(the_mutex);  // <-- SIGSEGV here
         if(the_queue.empty())
         {
             return false;
@@ -183,8 +183,113 @@ public:
     }
 };
 
+/*
+ * Listing 9.6 CiA
+ */
+using local_queue_type = std::queue<function_wrapper>;
 
 class thread_pool
+{
+    std::atomic_bool done;
+    std::vector<std::thread> threads;
+    join_threads joiner;
+    threadsafe_queue<function_wrapper> pool_work_queue;
+    static thread_local std::unique_ptr<local_queue_type> local_work_queue;
+    void worker_thread()
+    {
+        local_work_queue.reset(new local_queue_type);
+
+        while(!done)
+        {
+            run_pending_task();
+        }
+    }
+
+public:
+    thread_pool(): done(false), joiner(threads)
+    {
+        unsigned const thread_count=std::thread::hardware_concurrency();
+        try
+        {
+            for(unsigned i=0; i < thread_count; ++i)
+            {
+                threads.push_back(
+                        std::thread(&thread_pool::worker_thread,this));
+            }
+        }
+        catch(...)
+        {
+            done=true;
+            throw;
+        }
+    }
+
+    thread_pool(unsigned num_threads): done(false), joiner(threads)
+    {
+        unsigned const thread_count = std::min(num_threads, std::thread::hardware_concurrency());
+        try
+        {
+            for(unsigned i=0; i < thread_count; ++i)
+            {
+                threads.push_back(std::thread(&thread_pool::worker_thread, this));
+            }
+        }
+        catch(...)
+        {
+            done=true;
+            throw;
+        }
+    }
+    
+    ~thread_pool()
+    {
+        done=true;
+    }
+
+    template<typename FunctionType>
+    std::future<typename std::result_of<FunctionType()>::type>
+    submit(FunctionType f)
+    {
+        typedef typename std::result_of<FunctionType()>::type result_type;
+
+        std::packaged_task<result_type()> task(f);
+        std::future<result_type> res(task.get_future());
+        if(local_work_queue)
+        {
+            local_work_queue->push(std::move(task));
+        }
+        else
+        {
+            pool_work_queue.push(std::move(task));
+        }
+        return res;
+    }
+
+    void run_pending_task()
+    {
+        function_wrapper task;
+        if(local_work_queue && !local_work_queue->empty())
+        {
+            task=std::move(local_work_queue->front());
+            local_work_queue->pop();
+            task();
+        }
+        else if(pool_work_queue.try_pop(task))
+        {
+            task();
+        }
+        else
+        {
+            std::this_thread::yield();
+        }
+    }
+};
+
+/*
+ * Not using this - throws SIGSEGV when trying to steal work. Problem is 
+ *                  when work_stealing_queue::try_steal locks the mutex.
+ */
+class work_stealing_thread_pool
 {
     typedef function_wrapper task_type;
     std::atomic_bool done;
@@ -224,7 +329,7 @@ class thread_pool
         return false;
     }
 public:
-    thread_pool():
+    work_stealing_thread_pool():
             done(false), joiner(threads)
     {
         unsigned const thread_count=std::thread::hardware_concurrency();
@@ -233,7 +338,7 @@ public:
             for(unsigned i=0;i<thread_count;++i)
             {
                 queues.push_back(std::make_unique<work_stealing_queue>());
-                threads.push_back(std::thread(&thread_pool::worker_thread, this, i));
+                threads.push_back(std::thread(&work_stealing_thread_pool::worker_thread, this, i));
             }
         }
         catch(...)
@@ -243,7 +348,7 @@ public:
         }
     }
 
-    thread_pool(unsigned num_threads): done(false), joiner(threads)
+    work_stealing_thread_pool(unsigned num_threads): done(false), joiner(threads)
     {
         unsigned const thread_count = std::min(num_threads, std::thread::hardware_concurrency());
         try
@@ -251,7 +356,7 @@ public:
             for(unsigned i=0;i<thread_count;++i)
             {
                 queues.push_back(std::make_unique<work_stealing_queue>());
-                threads.push_back(std::thread(&thread_pool::worker_thread, this, i));
+                threads.push_back(std::thread(&work_stealing_thread_pool::worker_thread, this, i));
             }
         }
         catch(...)
@@ -262,7 +367,7 @@ public:
     }
 
 
-    ~thread_pool()
+    ~work_stealing_thread_pool()
     {
         done=true;
     }
