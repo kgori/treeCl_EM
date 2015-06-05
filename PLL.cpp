@@ -175,3 +175,46 @@ void PLL::set_optimisable_frequencies(int partition, bool optimisable) {
     partitions->dirty = PLL_TRUE;
     pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
 }
+
+unsigned PLL::sites() {
+    unsigned nsites = 0;
+    for (int i=0; i < partitions->numberOfPartitions; ++i) {
+        nsites += partitions->partitionData[i]->width;
+    }
+    return nsites;
+}
+
+std::vector<double> PLL::get_rates(int partition) {
+    if (partition >= partitions->numberOfPartitions) throw std::invalid_argument("Partitions out of bounds");
+    std::vector<double> rates_vec;
+    int num_states = partitions->partitionData[partition]->states;
+    int num_rates = (num_states * (num_states - 1)) / 2;
+    for (int j = 0; j < num_rates; ++j) {
+        rates_vec.push_back(partitions->partitionData[partition]->substRates[j]);
+    }
+    return rates_vec;
+}
+
+void PLL::set_rates(std::vector<double> rates, int partition, bool optimisable) {
+    if (partition >= partitions->numberOfPartitions) throw std::invalid_argument("Partitions out of bounds");
+    int num_states = partitions->partitionData[partition]->states;
+    size_t num_rates = (num_states * (num_states - 1)) / 2;
+    if (rates.size() != num_rates) {
+        std::ostringstream msg;
+        msg << "Rates vector is the wrong length. Should be " << num_rates;
+        throw std::invalid_argument(msg.str());
+    }
+    pllSetSubstitutionMatrix(&(rates[0]), num_rates, partition, partitions, tr.get());
+    set_optimisable_rates(partition, optimisable);
+}
+
+void PLL::set_optimisable_rates(int partition, bool optimisable) {
+    if (partition >= partitions->numberOfPartitions) throw std::invalid_argument("Partitions out of bounds");
+    if (partitions->partitionData[partition]->dataType == PLL_AA_DATA) {
+        return;
+    }
+    int pll_bool = optimisable ? PLL_TRUE : PLL_FALSE;
+    partitions->partitionData[partition]->optimizeSubstitutionRates = pll_bool;
+    partitions->dirty = PLL_TRUE;
+    pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
+}

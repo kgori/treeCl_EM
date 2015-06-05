@@ -103,6 +103,8 @@ public:
         return partitions->partitionData[i];
     };
 
+    unsigned sites();
+
     void tree_search(bool optimise_model);
     void set_tree(const std::string& nwk);
 
@@ -113,6 +115,10 @@ public:
     std::vector<double> get_frequencies(int partition);
     void set_frequencies(std::vector<double> freqs, int partition, bool optimisable);
     void set_optimisable_frequencies(int partition, bool optimisable);
+
+    std::vector<double> get_rates(int partition);
+    void set_rates(std::vector<double> rates, int partition, bool optimisable);
+    void set_optimisable_rates(int partition, bool optimisable);
 
 public:
     partitionList* partitions = nullptr;

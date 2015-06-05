@@ -202,7 +202,7 @@ double reassign(std::vector<int> assignment,
     for (int i=0; i<numgrps; ++i) {
         lnlsum += grps[i]->get_likelihood();
         std::string tree = grps[i]->get_tree();
-        threadpool(&PLL::set_tree, insts.size(), insts, tree); // SIGSEGV??
+        threadpool(&PLL::set_tree, 1, insts, tree); // SIGSEGV??
         for (int j=0; j < insts.size(); ++j) {
             reassignment_matrix[j][i] = insts[j]->get_likelihood();
         }
@@ -215,6 +215,20 @@ double reassign(std::vector<int> assignment,
     return lnlsum;
 }
 
+double strain(PLL* pll) {
+    return pll->get_likelihood() / pll->sites();
+}
+
+
+// Store some results / observations here
+struct parameters {
+    double alpha;
+    std::vector<double> freqs;
+    std::vector<double> rates;
+    double likelihood;
+    double nsites;
+    std::string tree;
+};
 
 int main()
 {
@@ -225,51 +239,88 @@ int main()
     attr.saveMemory = PLL_FALSE;
     attr.useRecom = PLL_FALSE;
     attr.randomNumberSeed = 12345;
-    attr.numberOfThreads = 1;
+    attr.numberOfThreads = std::thread::hardware_concurrency();
 
 
     std::vector<std::string> partitions = readlines(MYPART);
-    queueUPtr q;
+    unsigned nloci = partitions.size();
+    queueUPtr q; // Can reuse these pointers
     alignmentUPtr al;
-    std::vector<PLLUPtr> insts;
+    std::vector<parameters> params;
 
-    for (int i = 0; i < partitions.size(); ++i)
-    {
+    for (int i = 0; i < nloci; ++i) {
         al = parse_alignment_file(MYFILE);
         q = parse_partitions(partitions[i].c_str());
-        insts.push_back(std::make_unique<PLL>(attr, q.get(), al.get()));
+        PLLUPtr inst = std::make_unique<PLL>(attr, q.get(), al.get());
+        inst->tree_search(true);
+        parameters p;
+        p.alpha = inst->get_alpha(0);
+        p.freqs = inst->get_frequencies(0);
+        p.rates = inst->get_rates(0);
+        p.likelihood = inst->get_likelihood();
+        p.nsites = (*inst)[0]->width;
+        p.tree = inst->get_tree();
+        params.push_back(p);
     }
+
+    for (int i = 0; i < params.size(); ++i) {
+        std::cout << i << ":" << params[i].alpha << std::endl;
+    }
+    return 0;
 
 //    threadpool(&PLL::optimise, insts.size(), insts, true, true, true, true, 0.01, false);
-    threadpool(&PLL::tree_search, insts.size(), insts, true);
+//    threadpool(&PLL::tree_search, insts.size(), insts, true);
 
-    std::vector<double> alphas;
-    double lnlsum = 0;
-    for (auto& pll : insts)
-    {
-        lnlsum += pll->get_likelihood();
-        std::cout << pll->get_likelihood() << " " << pll->get_likelihood() / (*pll)[0]->width << std::endl;
-        alphas.push_back(pll->get_alpha(0));
-    }
-    std::cout << "LNLsum = " << lnlsum << std::endl;
-    print_container(alphas.begin(), alphas.end());
+    //std::vector<std::string> trees;
+    //for (auto& pll : insts) trees.push_back(pll->get_tree());
 
-    std::vector<int> assgn{0, 1, 2, 3, 4, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2};
-    std::vector<int> new_assgn(assgn.size(), 0);
-    double bestlnl = PLL_UNLIKELY;
-    double newlnl = reassign(assgn, partitions, insts, new_assgn);
-    while(newlnl > bestlnl)
-    {
-        bestlnl = newlnl;
-        assgn = new_assgn;
-        newlnl = reassign(assgn, partitions, insts, new_assgn);
-        std::cout << "EOL:bestlnl = " << std::fixed << std::setw(11) << std::setprecision(5) << bestlnl << std::endl;
-        std::cout << "EOL:newlnl = " << std::fixed << std::setw(11) << std::setprecision(5) << newlnl << std::endl;
-    }
-    std::cout << stringjoin(assgn.begin(), assgn.end(), ' ') << std::endl;
+    //std::vector<double> dm;
+    //for (int i = 0; i < insts.size(); ++i) {
+        //for (int j = 0; j < insts.size(); ++j) {
+            //insts[i]->set_tree(trees[j]);
+            //dm.push_back(strain(insts[i].get()));
+            //std::cout << strain(insts[i].get()) << " ";
+        //}
+        //std::cout << std::endl;
+    //}
 
-    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
-    std::cout << "Program runtime: " << duration / 1000.0 << "s" << std::endl;
-    return 0;
+    //for (int i = 0; i < insts.size(); ++i) {
+//        double refval = dm[i*insts.size()+i];
+//        for (int j = 0; j < insts.size(); ++j) {
+//            dm[i*insts.size()+j] -= refval;
+//            std::cout << dm[i*insts.size()+j] << " ";
+//        }
+//        std::cout << std::endl;
+//    }
+//
+//
+//    std::vector<double> alphas;
+//    double lnlsum = 0;
+//    for (auto& pll : insts)
+//    {
+//        lnlsum += pll->get_likelihood();
+//        std::cout << pll->get_likelihood() << " " << pll->get_likelihood() / (*pll)[0]->width << std::endl;
+//        alphas.push_back(pll->get_alpha(0));
+//    }
+//    std::cout << "LNLsum = " << lnlsum << std::endl;
+//    print_container(alphas.begin(), alphas.end());
+//
+//    std::vector<int> assgn{0, 1, 2, 3, 4, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2};
+//    std::vector<int> new_assgn(assgn.size(), 0);
+//    double bestlnl = PLL_UNLIKELY;
+//    double newlnl = reassign(assgn, partitions, insts, new_assgn);
+//    while(newlnl > bestlnl)
+//    {
+//        bestlnl = newlnl;
+//        assgn = new_assgn;
+//        newlnl = reassign(assgn, partitions, insts, new_assgn);
+//        std::cout << "EOL:bestlnl = " << std::fixed << std::setw(11) << std::setprecision(5) << bestlnl << std::endl;
+//        std::cout << "EOL:newlnl = " << std::fixed << std::setw(11) << std::setprecision(5) << newlnl << std::endl;
+//    }
+//    std::cout << stringjoin(assgn.begin(), assgn.end(), ' ') << std::endl;
+//
+//    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+//    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+//    std::cout << "Program runtime: " << duration / 1000.0 << "s" << std::endl;
+//    return 0;
 }

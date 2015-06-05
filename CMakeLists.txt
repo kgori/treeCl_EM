@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 project(treeCl_EM)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -g")
-set(MY_LIB_LINK_LIBRARIES -lpll-avx)
+set(MY_LIB_LINK_LIBRARIES -lpll-avx-pthreads)
 add_subdirectory(data)
 
 set(SOURCE_FILES
@@ -10,6 +10,6 @@ set(SOURCE_FILES
     PLL.cpp
     main.cpp)
 
-add_executable(treeCl_EM ${SOURCE_FILES} threadpool.h threadpool.cpp)
+add_executable(treeCl_EM ${SOURCE_FILES} threadpool.h threadpool.cpp partition_search.cpp partition_search.h)
 TARGET_LINK_LIBRARIES(treeCl_EM ${MY_LIB_LINK_LIBRARIES})
 
