@@ -349,7 +349,6 @@ public:
     {
         work_queue.push(f);
     }
-    bool is_done() { return done; };
 };
 
 #endif //TREECL_EM_THREADPOOL_H

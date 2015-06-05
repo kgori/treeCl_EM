@@ -1,7 +1,9 @@
 #include <algorithm>
 #include <fstream>
 #include <functional>
+#include <iomanip>
 #include <iostream>
+#include <map>
 #include <string>
 #include <sstream>
 #include <utility>
@@ -95,18 +97,6 @@ std::string get_tree(pllInstance* tr, partitionList* partitions) {
     return tree;
 }
 
-std::vector<int> get_within_group_index(const std::vector<int>& assignment) {
-    auto max_elem = std::max_element(assignment.begin(), assignment.end());
-    int ngrp = 1 + assignment[std::distance(assignment.begin(), max_elem)];
-    std::vector<int> grpix(ngrp, 0);
-    std::vector<int> result(assignment.size(), 0);
-    for (int i = 0; i < assignment.size(); ++i) {
-        int grp = assignment[i];
-        result[i] = grpix[grp]++;
-    }
-    return result;
-}
-
 /*
  * Function wrapper for multithreaded execution in threadpool.
  *
@@ -128,7 +118,105 @@ void threadpool(FunctionType&& fn, unsigned nthreads, std::vector<std::unique_pt
     }
 }
 
-int main() {
+std::vector<int> get_within_group_index(const std::vector<int>& assignment, int numgroups) {
+    std::vector<int> grpix(numgroups, 0);
+    std::vector<int> result(assignment.size(), 0);
+    for (int i = 0; i < assignment.size(); ++i) {
+        int grp = assignment[i];
+        result[i] = grpix[grp]++;
+    }
+    return result;
+}
+/*
+ * Rewrite a partition vector in restricted growth notation (i.e. the first group is called '0',
+ * the second is '1', ..., up to 'N-1'.
+ */
+void restricted_growth_notation(std::vector<int>& assignment) {
+    int grpnum = 0;
+    std::map<int, int> grpconv;
+    for (auto it=assignment.begin(); it!=assignment.end(); it++) {
+        auto search = grpconv.find(*it);
+        if(search == grpconv.end()) {
+            grpconv[*it] = grpnum;
+            *it = grpnum++;
+        }
+        else {
+            *it = search->second;
+        }
+    }
+}
+
+int get_number_of_groups(const std::vector<int>& assignment) {
+    auto max_elem = std::max_element(assignment.begin(), assignment.end());
+    return 1 + assignment[std::distance(assignment.begin(), max_elem)];
+}
+
+pllInstanceAttr get_attr(int rateHetModel, int fastScaling, int saveMemory, int useRecom, int randomNumberSeed) {
+    pllInstanceAttr attr;
+    attr.rateHetModel = rateHetModel;
+    attr.fastScaling = fastScaling;
+    attr.saveMemory = saveMemory;
+    attr.useRecom = useRecom;
+    attr.randomNumberSeed = randomNumberSeed;
+    attr.numberOfThreads = 1;
+    return attr;
+}
+
+double reassign(std::vector<int> assignment,
+                const std::vector<std::string>& partitions,
+                std::vector<PLLUPtr>& insts,  // dropped const qualifier to work w/threadpool function
+                std::vector<int>& new_assignment)
+{
+    int numgrps = get_number_of_groups(assignment);
+    auto wgi = get_within_group_index(assignment, numgrps);
+    std::vector<PLLUPtr> grps;
+    grps.reserve(numgrps);
+    std::vector<std::vector<std::string>> qs(numgrps);
+    for (int i = 0; i < assignment.size(); ++i) {
+        int group_index = assignment[i];
+        qs[group_index].push_back(partitions[i]);
+    }
+
+    alignmentUPtr al;
+    queueUPtr q;
+    pllInstanceAttr attr = get_attr(PLL_GAMMA, PLL_FALSE, PLL_FALSE, PLL_FALSE, 12345);
+    for (int j = 0; j < numgrps; ++j) {
+        al = parse_alignment_file(MYFILE);
+        std::string qstring = stringjoin(qs[j].begin(), qs[j].end()); // join together partition info from prev step
+        q = parse_partitions(qstring.c_str());
+        grps.push_back(std::make_unique<PLL>(attr, q.get(), al.get()));
+    }
+
+    //
+    for (int i = 0; i < insts.size(); ++i) {
+        grps[assignment[i]]->set_alpha(insts[i]->get_alpha(0), wgi[i], false);
+        grps[assignment[i]]->set_frequencies(insts[i]->get_frequencies(0), wgi[i], false);
+    }
+    //
+
+//    threadpool(&PLL::optimise, 1, grps, false, false, false, true, 0.1, false);
+    threadpool(&PLL::tree_search, grps.size(), grps, false);
+    double lnlsum = 0;
+    std::vector<std::vector<double>> reassignment_matrix(insts.size(), std::vector<double>(numgrps, 0));
+
+    for (int i=0; i<numgrps; ++i) {
+        lnlsum += grps[i]->get_likelihood();
+        std::string tree = grps[i]->get_tree();
+        threadpool(&PLL::set_tree, 1, insts, tree); // SIGSEGV??
+        for (int j=0; j < insts.size(); ++j) {
+            reassignment_matrix[j][i] = insts[j]->get_likelihood();
+        }
+    }
+    for (int i=0; i<insts.size(); ++i) {
+        auto max_iter = std::max_element(reassignment_matrix[i].begin(), reassignment_matrix[i].end());
+        new_assignment[i] = std::distance(reassignment_matrix[i].begin(), max_iter);
+    }
+    restricted_growth_notation(new_assignment);
+    return lnlsum;
+}
+
+int main()
+{
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
     pllInstanceAttr attr;
     attr.rateHetModel = PLL_GAMMA;
@@ -143,146 +231,40 @@ int main() {
     alignmentUPtr al;
     std::vector<PLLUPtr> insts;
 
-    for (int i = 0; i < partitions.size(); ++i) {
+    for (int i = 0; i < partitions.size(); ++i)
+    {
         al = parse_alignment_file(MYFILE);
         q = parse_partitions(partitions[i].c_str());
         insts.push_back(std::make_unique<PLL>(attr, q.get(), al.get()));
     }
 
-    threadpool(&PLL::optimise, 8, insts, true, true, true, true, 0.01, false);
+//    threadpool(&PLL::optimise, insts.size(), insts, true, true, true, true, 0.01, false);
+    threadpool(&PLL::tree_search, insts.size(), insts, true);
 
+    std::vector<double> alphas;
     double lnlsum = 0;
-    for (auto& pll : insts) {
+    for (auto& pll : insts)
+    {
         lnlsum += pll->get_likelihood();
         std::cout << pll->get_likelihood() << " " << pll->get_likelihood() / (*pll)[0]->width << std::endl;
+        alphas.push_back(pll->get_alpha(0));
     }
     std::cout << "LNLsum = " << lnlsum << std::endl;
+    print_container(alphas.begin(), alphas.end());
 
-    // Put in own scope - this could be a class / collection of functions
+    std::vector<int> assgn{0, 1, 2, 3, 4, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2};
+    std::vector<int> new_assgn(assgn.size(), 0);
+    double bestlnl = PLL_UNLIKELY;
+    double newlnl = reassign(assgn, partitions, insts, new_assgn);
+    while(newlnl > bestlnl)
     {
-        // BREAK INTO FN1 - Build vector of PLLs for each cluster
-        // --------------
-        // Assignments of loci to clusters (position in vector corresponds to locus,
-        //                                  value at position corresponds to group index)
-        std::vector<int> assgn{0, 0, 0, 1, 0, 2, 1, 2, 1, 1, 0, 2, 2, 0, 2};
-
-        // Bookkeeping: within group index
-        auto wgi = get_within_group_index(assgn);
-
-        // Number of groups is 1 higher than maximum group index (assume 0-based indexing)
-        auto max_elem = std::max_element(assgn.begin(), assgn.end());
-        int numgrps = 1 + assgn[std::distance(assgn.begin(), max_elem)];
-
-        // Initialise vector to hold PLL for each group
-        std::vector<PLLUPtr> grps;
-        grps.reserve(numgrps);
-
-        // Initialise vector to build up partition info for each group
-        std::vector<std::vector<std::string>> qs(numgrps);
-
-        for (int i = 0; i < assgn.size(); ++i) {
-            int group_index = assgn[i];
-            qs[group_index].push_back(partitions[i]);
-        }
-
-        for (int j = 0; j < numgrps; ++j) {
-            al = parse_alignment_file(MYFILE);
-            std::string qstring = stringjoin(qs[j].begin(), qs[j].end()); // join together partition info from prev step
-            q = parse_partitions(qstring.c_str());
-            grps.push_back(std::make_unique<PLL>(attr, q.get(), al.get()));
-        }
-        // END FN1
-
-        // BREAK INTO FN2 - Do computation with vector of PLLs
-        // Initialise vector of threads to do PLL computation
-        threadpool(&PLL::optimise, grps.size(), grps, false, false, false, true, 0.001, false);
-        // END FN2
-
-        // BREAK INTO FN3 - Process results
-        // Process results (just printing for now)
-        lnlsum = 0;
-        for (auto& pll : grps) {
-            lnlsum += pll->get_likelihood();
-            std::cout << pll->get_likelihood() << std::endl;
-        }
-        std::cout << "LNLsum = " << lnlsum << std::endl;
-
-        // These arrays (just printed ATM) will form basis for making moves between clusters
-        for (auto& locus : insts) {
-            for (auto& pll : grps) {
-                locus->set_tree(pll->get_tree());
-                std::cout << locus->get_likelihood() << " ";
-            }
-            std::cout << std::endl;
-        }
-        // END FN3
-
-        // FN4 - Do reassignments
-        // ...
+        bestlnl = newlnl;
+        assgn = new_assgn;
+        newlnl = reassign(assgn, partitions, insts, new_assgn);
+        std::cout << "EOL:bestlnl = " << std::fixed << std::setw(11) << std::setprecision(5) << bestlnl << std::endl;
+        std::cout << "EOL:newlnl = " << std::fixed << std::setw(11) << std::setprecision(5) << newlnl << std::endl;
     }
-
-    // Put in own scope - this could be a class / collection of functions
-    {
-        // BREAK INTO FN1 - Build vector of PLLs for each cluster
-        // --------------
-        // Assignments of loci to clusters (position in vector corresponds to locus,
-        //                                  value at position corresponds to group index)
-        std::vector<int> assgn{0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2};
-
-        // Bookkeeping: within group index
-        auto wgi = get_within_group_index(assgn);
-
-        // Number of groups is 1 higher than maximum group index (assume 0-based indexing)
-        auto max_elem = std::max_element(assgn.begin(), assgn.end());
-        int numgrps = 1 + assgn[std::distance(assgn.begin(), max_elem)];
-
-        // Initialise vector to hold PLL for each group
-        std::vector<PLLUPtr> grps;
-        grps.reserve(numgrps);
-
-        // Initialise vector to build up partition info for each group
-        std::vector<std::vector<std::string>> qs(numgrps);
-
-        for (int i = 0; i < assgn.size(); ++i) {
-            int group_index = assgn[i];
-            qs[group_index].push_back(partitions[i]);
-        }
-
-        for (int j = 0; j < numgrps; ++j) {
-            al = parse_alignment_file(MYFILE);
-            std::string qstring = stringjoin(qs[j].begin(), qs[j].end()); // join together partition info from prev step
-            q = parse_partitions(qstring.c_str());
-            grps.push_back(std::make_unique<PLL>(attr, q.get(), al.get()));
-        }
-        // END FN1
-
-        // BREAK INTO FN2 - Do computation with vector of PLLs
-        // Initialise vector of threads to do PLL computation
-        threadpool(&PLL::optimise, grps.size(), grps, false, false, false, true, 0.001, false);
-        // END FN2
-
-        // BREAK INTO FN3 - Process results
-        // Process results (just printing for now)
-        lnlsum = 0;
-        for (auto& pll : grps) {
-            lnlsum += pll->get_likelihood();
-            std::cout << pll->get_likelihood() << std::endl;
-        }
-        std::cout << "LNLsum = " << lnlsum << std::endl;
-
-        // These arrays (just printed ATM) will form basis for making moves between clusters
-        for (auto& locus : insts) {
-            for (auto& pll : grps) {
-                locus->set_tree(pll->get_tree());
-                std::cout << locus->get_likelihood() << " ";
-            }
-            std::cout << std::endl;
-        }
-        // END FN3
-
-        // FN4 - Do reassignments
-        // ...
-    }
+    std::cout << stringjoin(assgn.begin(), assgn.end(), ' ') << std::endl;
 
     std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();

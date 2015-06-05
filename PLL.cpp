@@ -99,14 +99,6 @@ void PLL::tree_search(bool optimise_model) {
     pllRaxmlSearchAlgorithm(tr.get(), partitions, pll_bool);
 }
 
-std::thread PLL::tree_search_in_thread() {
-    return std::thread( [this] { this->tree_search(true); } );
-}
-
-std::thread PLL::optimise_in_thread() {
-    return std::thread( [this] { this->optimise(false, false, false, true); } );
-}
-
 void PLL::adjustAlignmentLength(partitionList *partitions, pllAlignmentData *alignment) {
     // Do the adjustment of alignment length in case partition does not cover all sites
     int usedAlLength = 0;
@@ -116,8 +108,70 @@ void PLL::adjustAlignmentLength(partitionList *partitions, pllAlignmentData *ali
     alignment->sequenceLength = usedAlLength;
 }
 
-void PLL::set_tree(std::string nwk) {
+void PLL::set_tree(const std::string& nwk) {
     newickUPtr newick(pllNewickParseString(nwk.c_str()), NewickDeleter());
+
+    if (!newick) {
+        throw std::runtime_error("pllNewickParseString returned a null pointer!");
+    }
+
+    if (!pllValidateNewick(newick.get())) {
+        throw std::runtime_error("Invalid tree!");
+    }
+
     pllTreeInitTopologyNewick(tr.get(), newick.get(), PLL_FALSE);
+    pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
+}
+
+double PLL::get_alpha(int partition) {
+    return pllGetAlpha(partitions, partition);
+}
+
+void PLL::set_alpha(double alpha, int partition, bool optimisable) {
+    pllSetFixedAlpha(alpha, partition, partitions, tr.get());
+    set_optimisable_alpha(partition, optimisable);
+}
+
+void PLL::set_optimisable_alpha(int partition, bool optimisable) {
+    int pll_bool = optimisable ? PLL_TRUE : PLL_FALSE;
+    partitions->partitionData[partition]->optimizeAlphaParameter = pll_bool;
+    partitions->dirty = PLL_TRUE;
+    pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
+}
+
+std::vector<double> PLL::get_frequencies(int partition) {
+    std::vector<double> freqs_vec;
+    int num_states = partitions->partitionData[partition]->states;
+    for (int j = 0; j < num_states; ++j) {
+        freqs_vec.push_back(partitions->partitionData[partition]->frequencies[j]);
+    }
+    return freqs_vec;
+}
+
+void PLL::set_frequencies(std::vector<double> freqs, int partition, bool optimisable) {
+
+    double s = 0;
+    for (double f : freqs) s += f;
+    double diff = 1 - s;
+    if (diff < 0) diff = -diff;
+
+    if (diff > EPS) {
+        throw std::invalid_argument("Not setting frequencies: Frequencies do not sum to 1");
+    }
+    size_t num_states = partitions->partitionData[partition]->states;
+    if (freqs.size() != num_states) {
+        std::ostringstream msg;
+        msg << "Frequencies vector is the wrong length. Should be " << num_states;
+        throw std::invalid_argument(msg.str());
+    }
+    set_optimisable_frequencies(partition, true); // frequencies only updated if optimisable flag is true
+    pllSetFixedBaseFrequencies(&(freqs[0]), num_states, partition, partitions, tr.get());
+    set_optimisable_frequencies(partition, optimisable);
+}
+
+void PLL::set_optimisable_frequencies(int partition, bool optimisable) {
+    int pll_bool = optimisable ? PLL_TRUE : PLL_FALSE;
+    partitions->partitionData[partition]->optimizeBaseFrequencies = pll_bool;
+    partitions->dirty = PLL_TRUE;
     pllEvaluateLikelihood(tr.get(), partitions, tr->start, PLL_TRUE, PLL_FALSE);
 }

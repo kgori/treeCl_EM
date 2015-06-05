@@ -5,9 +5,15 @@
 #ifndef TREECL_EM_PLL_H
 #define TREECL_EM_PLL_H
 
-#include <pll/pll.h>
+extern "C" {
+    #include <pll/pll.h>
+}
+#include <sstream>
+#include <stdexcept>
 #include "memory_management.h"
 #include "threadpool.h"
+
+#define EPS 1e-6
 
 using pInfoPtr = pInfo*;
 //typedef pInfo *pInfoPtr;
@@ -52,9 +58,8 @@ public:
 
         pllTreeInitTopologyNewick(tr.get(), newick, PLL_FALSE);
         if (!pllLoadAlignment(tr.get(), alignment, partitions)) {
-            std::cout << "Problem" << std::endl;
+            throw std::runtime_error("Error loading alignment");
         }
-        pllComputeRandomizedStepwiseAdditionParsimonyTree(tr.get(), partitions);
         pllInitModel(tr.get(), partitions);
     }
 
@@ -90,18 +95,24 @@ public:
     int get_number_of_partitions();
     const int get_number_of_partitions() const;
     pInfoPtr& operator[](int i)  {
-        if (i > get_number_of_partitions()) throw std::exception();
+        if (i > get_number_of_partitions()) throw std::out_of_range("Index out of bounds");
         return partitions->partitionData[i];
     };
     const pInfoPtr& operator[](int i) const  {
-        if (i > get_number_of_partitions()) throw std::exception();
+        if (i > get_number_of_partitions()) throw std::out_of_range("Index out of bounds");
         return partitions->partitionData[i];
     };
 
     void tree_search(bool optimise_model);
-    std::thread tree_search_in_thread();
-    std::thread optimise_in_thread();
-    void set_tree(std::string nwk);
+    void set_tree(const std::string& nwk);
+
+    double get_alpha(int partition);
+    void set_alpha(double alpha, int partition, bool optimisable);
+    void set_optimisable_alpha(int partition, bool optimisable);
+
+    std::vector<double> get_frequencies(int partition);
+    void set_frequencies(std::vector<double> freqs, int partition, bool optimisable);
+    void set_optimisable_frequencies(int partition, bool optimisable);
 
 public:
     partitionList* partitions = nullptr;
