@@ -1,18 +1,14 @@
 //
-// Created by Kevin Gori on 02/06/15.
-// Classes taken from C++ Concurrency in Action, Anthony Williams (ISBN: 9781933988771)
+// Created by Kevin Gori on 05/06/15.
 //
 
-#ifndef TREECL_EM_THREADPOOL_H
-#define TREECL_EM_THREADPOOL_H
+#ifndef THREADPOOL_THREADPOOL_H
+#define THREADPOOL_THREADPOOL_H
 
-#include <algorithm>
-#include <chrono>
-#include <condition_variable>
 #include <deque>
+#include <functional>
 #include <future>
 #include <iostream>
-#include <list>
 #include <memory>
 #include <queue>
 #include <thread>
@@ -35,36 +31,9 @@ public:
     }
 };
 
-class function_wrapper
-{
-    struct impl_base {
-        virtual void call()=0;
-        virtual ~impl_base() {}
-    };
-    std::unique_ptr<impl_base> impl;
-    template<typename F>
-    struct impl_type: impl_base
-    {
-        F f;
-        impl_type(F&& f_): f(std::move(f_)) {}
-        void call() { f(); }
-    };
-public:
-    template<typename F>
-    function_wrapper(F&& f): impl(new impl_type<F>(std::move(f))) {}
-    void operator()() { impl->call(); }
-    function_wrapper() = default;
-    function_wrapper(function_wrapper&& other): impl(std::move(other.impl)) {}
-    function_wrapper& operator=(function_wrapper&& other)
-    {
-        impl=std::move(other.impl);
-        return *this;
-    }
-    function_wrapper(const function_wrapper&)=delete;
-    function_wrapper(function_wrapper&)=delete;
-    function_wrapper& operator=(const function_wrapper&)=delete;
-};
-
+/*
+ * Listing 6.3 CiA
+ */
 template<typename T>
 class threadsafe_queue
 {
@@ -129,58 +98,153 @@ public:
     }
 };
 
-class work_stealing_queue
+
+/*
+ * Listing 9.1 CiA
+ */
+class simple_thread_pool
 {
-private:
-    typedef function_wrapper data_type;
-    std::deque<data_type> the_queue;
-    mutable std::mutex the_mutex;
+    std::atomic_bool done;
+    threadsafe_queue<std::function<void()> > work_queue;
+    std::vector<std::thread> threads;
+    join_threads joiner;
+    void worker_thread()
+    {
+        while(!done)
+        {
+            std::function<void()> task;
+            if(work_queue.try_pop(task))
+            {
+                task();
+            }
+            else
+            {
+                std::this_thread::yield();
+            }
+        }
+    }
+public:
+    simple_thread_pool(): done(false), joiner(threads)
+    {
+        unsigned const thread_count=std::thread::hardware_concurrency();
+        try
+        {
+            for(unsigned i=0;i<thread_count;++i)
+            {
+                threads.push_back(std::thread(&simple_thread_pool::worker_thread, this));
+            }
+        }
+        catch(...)
+        {
+            done=true;
+            throw;
+        }
+    }
+
+    ~simple_thread_pool()
+    {
+        done=true;
+    }
+
+    template<typename FunctionType>
+    void submit(FunctionType f)
+    {
+        work_queue.push(std::function<void()>(f));
+    }
+};
+
+/*
+ * Listing 9.2 CiA
+ */
+
+class function_wrapper
+{
+    struct impl_base {
+        virtual void call()=0;
+        virtual ~impl_base() {}
+    };
+    std::unique_ptr<impl_base> impl;
+    template<typename F>
+    struct impl_type: impl_base
+    {
+        F f;
+        impl_type(F&& f_): f(std::move(f_)) {}
+        void call() { f(); }
+    };
+public:
+    template<typename F>
+    function_wrapper(F&& f): impl(new impl_type<F>(std::move(f))) {}
+    void operator()() { impl->call(); }
+    function_wrapper() = default;
+    function_wrapper(function_wrapper&& other): impl(std::move(other.impl)) {}
+    function_wrapper& operator=(function_wrapper&& other)
+    {
+        impl=std::move(other.impl);
+        return *this;
+    }
+    function_wrapper(const function_wrapper&)=delete;
+    function_wrapper(function_wrapper&)=delete;
+    function_wrapper& operator=(const function_wrapper&)=delete;
+};
+
+
+class waitable_thread_pool
+{
+    std::atomic_bool done;
+    std::vector<std::thread> threads;
+    join_threads joiner;
+    void worker_thread()
+    {
+        while(!done)
+        {
+            function_wrapper task;
+            if(work_queue.try_pop(task))
+            {
+                task();
+            }
+            else
+            {
+                std::this_thread::yield();
+            }
+        }
+    }
 
 public:
-    work_stealing_queue()
-    {}
-
-    work_stealing_queue(const work_stealing_queue& other)=delete;
-    work_stealing_queue& operator=(
-            const work_stealing_queue& other)=delete;
-
-    void push(data_type data)
+    threadsafe_queue<function_wrapper> work_queue;
+    waitable_thread_pool(): done(false), joiner(threads)
     {
-        std::lock_guard<std::mutex> lock(the_mutex);
-        the_queue.push_front(std::move(data));
-    }
-
-    bool empty() const
-    {
-        std::lock_guard<std::mutex> lock(the_mutex);
-        return the_queue.empty();
-    }
-
-    bool try_pop(data_type& res)
-    {
-        std::lock_guard<std::mutex> lock(the_mutex);
-        if(the_queue.empty())
+        unsigned const thread_count=std::thread::hardware_concurrency();
+        try
         {
-            return false;
+            for(unsigned i=0;i<thread_count;++i)
+            {
+                threads.push_back(
+                        std::thread(&waitable_thread_pool::worker_thread,this));
+            }
         }
-
-        res=std::move(the_queue.front());
-        the_queue.pop_front();
-        return true;
-    }
-
-    bool try_steal(data_type& res)  // TODO: SIGSEGV HERE
-    {
-        std::lock_guard<std::mutex> lock(the_mutex);  // <-- SIGSEGV here
-        if(the_queue.empty())
+        catch(...)
         {
-            return false;
+            done=true;
+            throw;
         }
-
-        res=std::move(the_queue.back());
-        the_queue.pop_back();
-        return true;
     }
+    ~waitable_thread_pool()
+    {
+        done=true;
+    }
+
+    template<typename FunctionType>
+    std::future<typename std::result_of<FunctionType()>::type>
+    submit(FunctionType f)
+    {
+        typedef typename std::result_of<FunctionType()>::type result_type;
+
+        std::packaged_task<result_type()> task(std::move(f));
+        std::future<result_type> res(task.get_future());
+        work_queue.push(std::move(task));
+        return res;
+    }
+    // rest as before
 };
 
 /*
@@ -188,7 +252,7 @@ public:
  */
 using local_queue_type = std::queue<function_wrapper>;
 
-class thread_pool
+class local_queue_thread_pool
 {
     std::atomic_bool done;
     std::vector<std::thread> threads;
@@ -206,15 +270,16 @@ class thread_pool
     }
 
 public:
-    thread_pool(): done(false), joiner(threads)
+    local_queue_thread_pool():
+            done(false),joiner(threads)
     {
         unsigned const thread_count=std::thread::hardware_concurrency();
         try
         {
-            for(unsigned i=0; i < thread_count; ++i)
+            for(unsigned i=0;i<thread_count;++i)
             {
                 threads.push_back(
-                        std::thread(&thread_pool::worker_thread,this));
+                        std::thread(&local_queue_thread_pool::worker_thread,this));
             }
         }
         catch(...)
@@ -223,25 +288,7 @@ public:
             throw;
         }
     }
-
-    thread_pool(unsigned num_threads): done(false), joiner(threads)
-    {
-        unsigned const thread_count = std::min(num_threads, std::thread::hardware_concurrency());
-        try
-        {
-            for(unsigned i=0; i < thread_count; ++i)
-            {
-                threads.push_back(std::thread(&thread_pool::worker_thread, this));
-            }
-        }
-        catch(...)
-        {
-            done=true;
-            throw;
-        }
-    }
-    
-    ~thread_pool()
+    ~local_queue_thread_pool()
     {
         done=true;
     }
@@ -286,8 +333,63 @@ public:
 };
 
 /*
- * Not using this - throws SIGSEGV when trying to steal work. Problem is 
- *                  when work_stealing_queue::try_steal locks the mutex.
+ * Listing 9.7 CiA
+ */
+class work_stealing_queue
+{
+private:
+    typedef function_wrapper data_type;
+    std::deque<data_type> the_queue;
+    mutable std::mutex the_mutex;
+
+public:
+    work_stealing_queue() {}
+    ~work_stealing_queue() = default;
+
+    work_stealing_queue(const work_stealing_queue& other)=delete;
+    work_stealing_queue& operator=(const work_stealing_queue& other)=delete;
+
+    void push(data_type data)
+    {
+        std::lock_guard<std::mutex> lock(the_mutex);
+        the_queue.push_front(std::move(data));
+    }
+
+    bool empty() const
+    {
+        std::lock_guard<std::mutex> lock(the_mutex);
+        return the_queue.empty();
+    }
+
+    bool try_pop(data_type& res)
+    {
+        std::lock_guard<std::mutex> lock(the_mutex);
+        if(the_queue.empty())
+        {
+            return false;
+        }
+
+        res=std::move(the_queue.front());
+        the_queue.pop_front();
+        return true;
+    }
+
+    bool try_steal(data_type& res)
+    {
+        std::lock_guard<std::mutex> lock(the_mutex);
+        if(the_queue.empty())
+        {
+            return false;
+        }
+
+        res=std::move(the_queue.back());
+        the_queue.pop_back();
+        return true;
+    }
+};
+
+/*
+ * Work stealing thread pool
  */
 class work_stealing_thread_pool
 {
@@ -329,8 +431,7 @@ class work_stealing_thread_pool
         return false;
     }
 public:
-    work_stealing_thread_pool():
-            done(false), joiner(threads)
+    work_stealing_thread_pool(): done(false), joiner(threads)
     {
         unsigned const thread_count=std::thread::hardware_concurrency();
         try
@@ -338,6 +439,9 @@ public:
             for(unsigned i=0;i<thread_count;++i)
             {
                 queues.push_back(std::make_unique<work_stealing_queue>());
+            }
+            for(unsigned i=0;i<thread_count;++i)
+            {
                 threads.push_back(std::thread(&work_stealing_thread_pool::worker_thread, this, i));
             }
         }
@@ -356,6 +460,9 @@ public:
             for(unsigned i=0;i<thread_count;++i)
             {
                 queues.push_back(std::make_unique<work_stealing_queue>());
+            }
+            for(unsigned i=0;i<thread_count;++i)
+            {
                 threads.push_back(std::thread(&work_stealing_thread_pool::worker_thread, this, i));
             }
         }
@@ -393,7 +500,7 @@ public:
     {
         task_type task;
         if(pop_task_from_local_queue(task) ||
-           pop_task_from_pool_queue(task) ||
+           pop_task_from_pool_queue(task)  ||
            pop_task_from_other_thread_queue(task))
         {
             task();
@@ -406,54 +513,4 @@ public:
 };
 
 
-class simple_thread_pool
-{
-    std::atomic_bool done;
-    threadsafe_queue<std::function<void()>> work_queue;
-    std::vector<std::thread> threads;
-    join_threads joiner;
-    void worker_thread()
-    {
-        while(!done)
-        {
-            std::function<void()> task;
-            if(work_queue.try_pop(task))
-            {
-                task();
-            }
-            else
-            {
-                std::this_thread::yield();
-            }
-        }
-    }
-public:
-    simple_thread_pool():
-            done(false),joiner(threads)
-    {
-        unsigned const thread_count=std::thread::hardware_concurrency();
-        try
-        {
-            for(unsigned i=0;i<thread_count;++i)
-            {
-                threads.push_back(std::thread(&simple_thread_pool::worker_thread, this));
-            }
-        }
-        catch(...)
-        {
-            done=true;
-            throw;
-        }
-    }
-    ~simple_thread_pool()
-    {
-        done=true;
-    }
-    template<typename FunctionType>
-    void submit(FunctionType f)
-    {
-        work_queue.push(f);
-    }
-};
-
-#endif //TREECL_EM_THREADPOOL_H
+#endif //THREADPOOL_THREADPOOL_H

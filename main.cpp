@@ -105,7 +105,7 @@ std::string get_tree(pllInstance* tr, partitionList* partitions) {
  */
 template <typename FunctionType, typename ValueType, typename ...Args>
 void threadpool(FunctionType&& fn, unsigned nthreads, std::vector<std::unique_ptr<ValueType>>& data, Args&&... args) {
-    thread_pool pool(nthreads);
+    work_stealing_thread_pool pool(nthreads);
     std::vector<std::future<void>> futures;
 
     for (auto& data_item : data) {
@@ -247,6 +247,7 @@ int main()
     queueUPtr q; // Can reuse these pointers
     alignmentUPtr al;
     std::vector<parameters> params;
+    std::vector<PLLUPtr> insts;
 
     for (int i = 0; i < nloci; ++i) {
         al = parse_alignment_file(MYFILE);
@@ -266,13 +267,11 @@ int main()
     for (int i = 0; i < params.size(); ++i) {
         std::cout << i << ":" << params[i].alpha << std::endl;
     }
-    return 0;
 
 //    threadpool(&PLL::optimise, insts.size(), insts, true, true, true, true, 0.01, false);
 //    threadpool(&PLL::tree_search, insts.size(), insts, true);
 
-    //std::vector<std::string> trees;
-    //for (auto& pll : insts) trees.push_back(pll->get_tree());
+    std::vector<std::string> trees;
 
     //std::vector<double> dm;
     //for (int i = 0; i < insts.size(); ++i) {
