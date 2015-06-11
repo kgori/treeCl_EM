@@ -10,6 +10,6 @@ set(SOURCE_FILES
     PLL.cpp
     main.cpp)
 
-add_executable(treeCl_EM ${SOURCE_FILES} threadpool.h threadpool.cpp partition_search.cpp partition_search.h)
+add_executable(treeCl_EM ${SOURCE_FILES} threadpool.h threadpool.cpp partition_search.cpp partition_search.h Optimiser.cpp Optimiser.h)
 TARGET_LINK_LIBRARIES(treeCl_EM ${MY_LIB_LINK_LIBRARIES})
 

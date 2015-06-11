@@ -219,20 +219,19 @@ double strain(PLL* pll) {
     return pll->get_likelihood() / pll->sites();
 }
 
-
-// Store some results / observations here
+// Parameters that belong to the locus
 struct parameters {
     double alpha;
     std::vector<double> freqs;
     std::vector<double> rates;
-    double likelihood;
-    double nsites;
-    std::string tree;
 };
+
+
 
 int main()
 {
-    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+    std::chrono::high_resolution_clock::time_point t1;
+    std::chrono::high_resolution_clock::time_point t2;
     pllInstanceAttr attr;
     attr.rateHetModel = PLL_GAMMA;
     attr.fastScaling = PLL_FALSE;
@@ -248,55 +247,37 @@ int main()
     std::vector<parameters> params;
     std::vector<PLLUPtr> insts;
 
+    t1 = std::chrono::high_resolution_clock::now();
     q = parse_partitions(stringjoin(partitions.begin(), partitions.end(), '\n'));
     al = parse_alignment_file(MYFILE);
-    PLLUPtr inst = std::make_unique<PLL>(attr, q.get(), al.get());
-
-    double lh = 0;
-    for (int i = 0; i < nloci; ++i) {
-        auto partition = (*inst)[i];
-        std::cout << inst->get_likelihood() << std::endl;
-        std::cout << partition->partitionWeight << std::endl;
-        std::cout << partition->partitionContribution << std::endl;
-        std::cout << partition->partitionLH << std::endl;
-        lh += partition->partitionLH;
-        partition->partitionContribution *= 2;
-        std::cout << "---" << std::endl;
+    {
+        PLLUPtr inst = std::make_unique<PLL>(attr, q.get(), al.get());
+        inst->optimise(true, true, true, true, 0.01, false);
+        t2 = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+        std::cout << "Joint runtime: " << duration / 1000.0 << "s" << std::endl;
     }
-    std::cout << "Total = " << lh << std::endl;
-    std::cout << inst->get_likelihood() << std::endl;
+    t1 = t2;
 
-    return 0;
-
+    // First pass - get initial model parameters [alpha, freqs, rates] for each locus
     for (int i = 0; i < nloci; ++i) {
         al = parse_alignment_file(MYFILE);
         q = parse_partitions(partitions[i].c_str());
         PLLUPtr inst = std::make_unique<PLL>(attr, q.get(), al.get());
         inst->optimise(true, true, true, true, 0.01, false);
-        parameters p;
-        p.alpha = inst->get_alpha(0);
-        p.freqs = inst->get_frequencies(0);
-        p.rates = inst->get_rates(0);
-        p.likelihood = inst->get_likelihood();
-        p.nsites = (*inst)[0]->width;
-        p.tree = inst->get_tree();
-        params.push_back(p);
-        auto partition = (*inst)[0];
-        std::cout << inst->get_likelihood() << std::endl;
-        std::cout << partition->partitionWeight << std::endl;
-        std::cout << partition->partitionContribution << std::endl;
-        std::cout << "---" << std::endl;
-
     }
+    t2 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+    std::cout << "Independent runtime: " << duration / 1000.0 << "s" << std::endl;
 
-    for (int i = 0; i < params.size(); ++i) {
-        std::cout << i << ":" << params[i].alpha << std::endl;
-    }
+//    for (int i = 0; i < params.size(); ++i) {
+//        std::cout << i << ":" << params[i].alpha << std::endl;
+//    }
 
 //    threadpool(&PLL::optimise, insts.size(), insts, true, true, true, true, 0.01, false);
 //    threadpool(&PLL::tree_search, insts.size(), insts, true);
 
-    std::vector<std::string> trees;
+//    std::vector<std::string> trees;
 
     //std::vector<double> dm;
     //for (int i = 0; i < insts.size(); ++i) {
@@ -346,5 +327,5 @@ int main()
 //    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
 //    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
 //    std::cout << "Program runtime: " << duration / 1000.0 << "s" << std::endl;
-//    return 0;
+    return 0;
 }
