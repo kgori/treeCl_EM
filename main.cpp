@@ -241,7 +241,6 @@ int main()
     attr.randomNumberSeed = 12345;
     attr.numberOfThreads = std::thread::hardware_concurrency();
 
-
     std::vector<std::string> partitions = readlines(MYPART);
     unsigned nloci = partitions.size();
     queueUPtr q; // Can reuse these pointers
@@ -249,11 +248,31 @@ int main()
     std::vector<parameters> params;
     std::vector<PLLUPtr> insts;
 
+    q = parse_partitions(stringjoin(partitions.begin(), partitions.end(), '\n'));
+    al = parse_alignment_file(MYFILE);
+    PLLUPtr inst = std::make_unique<PLL>(attr, q.get(), al.get());
+
+    double lh = 0;
+    for (int i = 0; i < nloci; ++i) {
+        auto partition = (*inst)[i];
+        std::cout << inst->get_likelihood() << std::endl;
+        std::cout << partition->partitionWeight << std::endl;
+        std::cout << partition->partitionContribution << std::endl;
+        std::cout << partition->partitionLH << std::endl;
+        lh += partition->partitionLH;
+        partition->partitionContribution *= 2;
+        std::cout << "---" << std::endl;
+    }
+    std::cout << "Total = " << lh << std::endl;
+    std::cout << inst->get_likelihood() << std::endl;
+
+    return 0;
+
     for (int i = 0; i < nloci; ++i) {
         al = parse_alignment_file(MYFILE);
         q = parse_partitions(partitions[i].c_str());
         PLLUPtr inst = std::make_unique<PLL>(attr, q.get(), al.get());
-        inst->tree_search(true);
+        inst->optimise(true, true, true, true, 0.01, false);
         parameters p;
         p.alpha = inst->get_alpha(0);
         p.freqs = inst->get_frequencies(0);
@@ -262,6 +281,12 @@ int main()
         p.nsites = (*inst)[0]->width;
         p.tree = inst->get_tree();
         params.push_back(p);
+        auto partition = (*inst)[0];
+        std::cout << inst->get_likelihood() << std::endl;
+        std::cout << partition->partitionWeight << std::endl;
+        std::cout << partition->partitionContribution << std::endl;
+        std::cout << "---" << std::endl;
+
     }
 
     for (int i = 0; i < params.size(); ++i) {
