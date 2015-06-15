@@ -3,7 +3,14 @@
 //
 
 #include <algorithm>
+#include <sstream>
 #include "PLL.h"
+
+namespace utils {
+
+}
+
+
 std::string PLL::get_tree() {
     pllTreeToNewick(tr->tree_string, tr.get(), partitions,
     tr->start->back, PLL_TRUE, PLL_TRUE,

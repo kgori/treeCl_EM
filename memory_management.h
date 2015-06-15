@@ -38,5 +38,6 @@ using alignmentUPtr = std::unique_ptr<pllAlignmentData, AlignmentDeleter>;
 using newickUPtr = std::unique_ptr<pllNewickTree, NewickDeleter>;
 using queueUPtr = std::unique_ptr<pllQueue, QueueDeleter>;
 using instanceUPtr = std::unique_ptr<pllInstance, InstanceDeleter>;
+using attrSPtr = std::shared_ptr<pllInstanceAttr>;
 
 #endif //TREECL_EM_MEMORY_MANAGEMENT_H

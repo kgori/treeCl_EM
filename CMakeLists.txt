@@ -6,10 +6,9 @@ add_subdirectory(data)
 
 set(SOURCE_FILES
     memory_management.h
-    threadpool.h
     PLL.cpp
     main.cpp)
 
-add_executable(treeCl_EM ${SOURCE_FILES} threadpool.h threadpool.cpp partition_search.cpp partition_search.h Optimiser.cpp Optimiser.h)
+add_executable(treeCl_EM ${SOURCE_FILES} Optimiser.cpp Optimiser.h utils.h utils.cpp ValueTable.cpp ValueTable.h)
 TARGET_LINK_LIBRARIES(treeCl_EM ${MY_LIB_LINK_LIBRARIES})
 

@@ -8,15 +8,14 @@
 extern "C" {
     #include <pll/pll.h>
 }
-#include <sstream>
-#include <stdexcept>
 #include "memory_management.h"
-#include "threadpool.h"
+#include "utils.h"
 
 #define EPS 1e-6
 
 using pInfoPtr = pInfo*;
-//typedef pInfo *pInfoPtr;
+
+
 class PLL{
 
 public:

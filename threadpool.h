@@ -512,5 +512,25 @@ public:
     }
 };
 
+/*
+ * Function wrapper for multithreaded execution in threadpool.
+ *
+ * Pass in a reference to a member function [that returns void], the number of threads, a vector of unique pointers to
+ * the data items to operate on, and the arguments that will be forwarded to the function
+ */
+template <typename FunctionType, typename ValueType, typename ...Args>
+void threadpool(FunctionType&& fn, unsigned nthreads, std::vector<std::unique_ptr<ValueType>>& data, Args&&... args) {
+    work_stealing_thread_pool pool(nthreads);
+    std::vector<std::future<void>> futures;
+
+    for (auto& data_item : data) {
+        auto bound_fn = std::bind(fn, data_item.get(), std::forward<Args>(args)...);
+        futures.push_back(pool.submit(bound_fn));
+    }
+
+    for (auto& fut : futures) {
+        fut.get();
+    }
+}
 
 #endif //THREADPOOL_THREADPOOL_H
