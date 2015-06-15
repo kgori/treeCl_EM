@@ -12,6 +12,7 @@
 #include "memory_management.h"
 #include "PLL.h"
 #include "utils.h"
+#include "ValueTable.h"
 
 const double UNLIKELY = std::numeric_limits<double>::lowest();
 
@@ -72,7 +73,7 @@ public:
     std::vector<int> make_random_assignment();
     std::vector<double> get_proportions(int pseudocount=1);
     pllresult get_parameters(PLLUPtr&& pll);
-
+    void make_probability_table();
 private:
     unsigned nGroups;
     unsigned nLoci;
@@ -91,6 +92,8 @@ private:
     std::vector<pergroup> trees;
     std::vector<double> proportions;
     bool have_parameters = false;
+public:
+    std::unique_ptr<ValueTable> vtab;
 };
 
 

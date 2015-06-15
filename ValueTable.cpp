@@ -5,13 +5,13 @@
 #include "ValueTable.h"
 
 ValueTable::ValueTable(unsigned rows, unsigned cols) {
-    table.resize(rows * cols, 0);
+    table = std::vector<std::vector<double>>(rows, std::vector<double>(cols, 0));
     nrow = rows;
     ncol = cols;
 }
 
 double ValueTable::get(unsigned r, unsigned c) {
-    return table[nrow*r+c];
+    return table[r][c];
 }
 
 std::vector<double> ValueTable::colsum() {
@@ -45,7 +45,7 @@ double ValueTable::sum() {
 }
 
 void ValueTable::set(unsigned r, unsigned c, double val) {
-    table[nrow*r+c] = val;
+    table[r][c] = val;
 }
 
 std::vector<double> ValueTable::rowmean() {
@@ -67,4 +67,25 @@ std::vector<double> ValueTable::colmean() {
 double ValueTable::mean() {
     double s = sum();
     return s / (nrow * ncol);
+}
+
+void ValueTable::print() {
+    for (int r=0; r < nrow; ++r) {
+        for (int c=0; c < ncol; ++c) {
+            std::cout << this->get(r, c) << ' ';
+        }
+        std::cout << std::endl;
+    }
+}
+
+std::vector<double> ValueTable::rowmax() {
+    std::vector<double> result;
+    for (auto& row : table) {
+        double max = row[0];
+        for (size_t i = 1; i < ncol; ++i) {
+            if (row[i] > max) max = row[i];
+        }
+        result.push_back(max);
+    }
+    return result;
 }

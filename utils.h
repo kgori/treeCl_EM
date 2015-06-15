@@ -6,6 +6,7 @@
 #define TREECL_EM_UTILS_H
 
 #include <sstream>
+#include <vector>
 #include "memory_management.h"
 
 namespace utils {
@@ -13,6 +14,7 @@ namespace utils {
     std::vector<std::string> readlines(const std::string& filename);
     alignmentUPtr parse_alignment_file(std::string path);
     queueUPtr parse_partitions(std::string partitions);
+    double logsumexp(const std::vector<double>& nums);
 
     template <typename Iter>
     std::string stringjoin(Iter it, Iter end, char delim = '\n') {

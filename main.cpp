@@ -148,12 +148,16 @@ int main()
 
     std::vector<std::string> partitions = utils::readlines(MYPART);
     auto o = Optimiser(MYFILE, partitions, attr);
-    o.set_assignment(std::vector<int>{0,0,0,0,0,2,2,2,2,2,1,1,1,1,1});
+    o.set_assignment(std::vector<int>{0,1,2,0,1,2,0,1,2,0,1,2,0,1,2});
     std::vector<int> x = o.get_assignment();
     std::vector<double> y = o.get_proportions(1);
     utils::print_container(x.begin(), x.end());
     utils::print_container(y.begin(), y.end());
+
     o.mStep();
-    std::cout << o.get_likelihood() << std::endl;
+    o.eStep();
+    std::cout << "VTAB" << std::endl;
+    o.vtab->print();
+
     return 0;
 }

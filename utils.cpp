@@ -2,6 +2,7 @@
 // Created by Kevin Gori on 15/06/15.
 //
 
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -58,5 +59,19 @@ namespace utils{
         else {
             return queueUPtr(pllPartitionParseString(partitions.c_str()), QueueDeleter());
         }
+    }
+
+    double logsumexp(const std::vector<double>& nums) {
+        double max_exp = nums[0], sum = 0.0;
+        size_t i;
+
+        for (i = 1 ; i < nums.size() ; i++)
+            if (nums[i] > max_exp)
+                max_exp = nums[i];
+
+        for (i = 0; i < nums.size() ; i++)
+            sum += exp(nums[i] - max_exp);
+
+        return log(sum) + max_exp;
     }
 }

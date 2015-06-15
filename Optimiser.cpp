@@ -54,10 +54,24 @@ std::vector<double> Optimiser::get_proportions(int pseudocount) {
     return props;
 }
 
-void Optimiser::eStep() {
-    ValueTable lnl(nLoci, nGroups);
+void Optimiser::make_probability_table() {
+    std::vector<double> logprobsum;
+    for (const auto& row : vtab->get_table()) {
+        double lps = utils::logsumexp(row);
+        std::cout << "LPS = " << lps << std::endl;
+        logprobsum.push_back(lps);
+    }
 
+    for (int i=0; i < vtab->nrows(); ++i) {
+        for (int j=0; j < vtab->ncols(); ++j) {
+            vtab->set(i, j, exp(vtab->get(i, j) - logprobsum[i]));
+        }
+    }
+}
+
+void Optimiser::eStep() {
     for (int i=0; i < nLoci; ++i) {
+        // TODO: nLoci reads of the alignment file every eStep? Too many!
         al = utils::parse_alignment_file(alignment);
         q = utils::parse_partitions(partitions[i].c_str());
         PLLUPtr pll = std::make_unique<PLL>(*attr, q.get(), al.get());
@@ -67,24 +81,15 @@ void Optimiser::eStep() {
         pll->set_frequencies(parameters[i].freqs, 0, false);
         pll->set_rates(parameters[i].rates, 0, false);
         for (int j=0; j < nGroups; ++j) {
+            auto x=trees.size();
+            auto tree = trees[j].tree;
             pll->set_tree(trees[j].tree);
-            lnl.set(i, j, pll->get_likelihood());
+            vtab->set(i, j, pll->get_likelihood() + log(proportions[j]));
         }
     }
-    auto c = lnl.rowmean();
-    for (int i=0; i < nLoci; ++i) {
-        for (int j=0; j < nGroups; ++j) {
-            double val = proportions[i] * exp(lnl.get(i, j) - c[i]);
-            lnl.set(i, j, val);
-        }
-    }
-    auto rowsum = lnl.rowsum();
-    for (int i=0; i < nLoci; ++i) {
-        for (int j=0; j < nGroups; ++j) {
-            lnl.set(i, j, lnl.get(i, j) / rowsum(i));
-        }
-    }
-    return lnl;
+    std::cout << "INTERMEDIATE VTAB" << std::endl;
+    vtab->print();
+    make_probability_table();
 }
 
 void Optimiser::cStep() {
@@ -171,6 +176,7 @@ void Optimiser::set_assignment(const std::vector<int>& a) {
     assignment = a;
     index(a);
     set_qs(a);
+    vtab = std::make_unique<ValueTable>(nLoci, nGroups);
 }
 
 void Optimiser::set_assignment(int nGroups) {
