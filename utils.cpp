@@ -2,6 +2,7 @@
 // Created by Kevin Gori on 15/06/15.
 //
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -73,5 +74,40 @@ namespace utils{
             sum += exp(nums[i] - max_exp);
 
         return log(sum) + max_exp;
+    }
+
+    template<typename T>
+    std::vector<T> csum(const std::vector<T> &row) {
+        std::vector<T> result;
+        double val = 0;
+        for (double n : row) {
+            val += n;
+            result.push_back(val);
+        }
+        return result;
+    }
+
+    template std::vector<double> csum(const std::vector<double> &row);
+    template std::vector<int> csum(const std::vector<int> &row);
+
+    std::vector<double> scale_by_sum(const std::vector<double> &nums) {
+        double sum = std::accumulate(nums.begin(), nums.end(), 0.0);
+        std::cout << sum << std::endl;
+        std::vector<double> output;
+        for (auto elem : nums) {
+            output.push_back(elem / sum);
+        }
+        return output;
+    }
+
+    size_t random_select(const std::vector<double> &probs) {
+        std::random_device rd;
+        std::mt19937 engine(rd());
+        std::uniform_real_distribution<double> dist(0, 1);
+        double u = dist(engine);
+        for (size_t s = 0; s < probs.size(); ++s) {
+            if (u < probs[s]) return s;
+        }
+        return probs.size();
     }
 }

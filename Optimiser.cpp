@@ -87,8 +87,6 @@ void Optimiser::eStep() {
             vtab->set(i, j, pll->get_likelihood() + log(proportions[j]));
         }
     }
-    std::cout << "INTERMEDIATE VTAB" << std::endl;
-    vtab->print();
     make_probability_table();
 }
 
@@ -103,6 +101,22 @@ void Optimiser::cStep() {
     }
 }
 
+// MAP function
+//void Optimiser::cStep_map() {
+//
+//}
+
+
+// IMPUTE function; ANNEAL is a special case
+//void Optimiser::cStep_impute() {
+//
+//}
+
+
+// Check no group is empty function
+
+
+
 void Optimiser::mStep() {
     int index;
     double lnl = 0;
@@ -115,11 +129,10 @@ void Optimiser::mStep() {
         q = utils::parse_partitions(qstring.c_str());
         PLLUPtr pll = std::make_unique<PLL>(*attr, q.get(), al.get());
 
-        // Load current parameter estimates, if we have any yet (only don't on first iteration)
+        // Load current parameter estimates, if we have any yet (which we don't on first iteration)
         if (have_parameters) {
             bool opt = (schedule == Schedule::PARAM_SEARCH || schedule == Schedule::FULL_SEARCH);
-            for (int wgi = 0;
-                 wgi < indexmap[g].size(); ++wgi) {  // wgi = within group index; wdi = within dataset index
+            for (int wgi = 0; wgi < indexmap[g].size(); ++wgi) {  // wgi = within group index; wdi = within dataset index
                 int wdi = indexmap[g][wgi];
                 pll->set_alpha(parameters[wdi].alpha, wgi, opt);
                 pll->set_frequencies(parameters[wdi].freqs, wgi, opt);

@@ -15,6 +15,11 @@ namespace utils {
     alignmentUPtr parse_alignment_file(std::string path);
     queueUPtr parse_partitions(std::string partitions);
     double logsumexp(const std::vector<double>& nums);
+    std::vector<double> scale_by_sum(const std::vector<double>& nums);
+    size_t random_select(const std::vector<double>& probs);
+
+    template<typename T>
+    std::vector<T> csum(const std::vector<T>& row);
 
     template <typename Iter>
     std::string stringjoin(Iter it, Iter end, char delim = '\n') {
